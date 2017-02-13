@@ -21,7 +21,11 @@ int t;
 
 //Camera information
 vec3 cameraPos(0, 0, -3.001);
+mat3 cameraRot(vec3(1,0,0), vec3(0,1,0), vec3(0,0,1));
+float yaw = 0;
 float focalLength = 500;
+float posDelta = 0.01;
+float rotDelta = 0.01;
 
 //Scene information
 vector<Triangle> triangles;
@@ -35,6 +39,7 @@ void VertexShader(const vec3& v, ivec2& p);
 void Interpolate(ivec2 a, ivec2 b, vector<ivec2>& result);
 void DrawLineSDL(SDL_Surface* surface, ivec2 a, ivec2 b, vec3 color);
 void DrawPolygonEdges(const vector<vec3>& vertices);
+void updateRotationMatrix();
 
 int main( int argc, char* argv[] )
 {
@@ -61,6 +66,34 @@ void Update()
 	float dt = float(t2-t);
 	t = t2;
 	cout << "Render time: " << dt << " ms." << endl;
+
+	//get key presses and update camera position
+	Uint8* keystate = SDL_GetKeyState(0);
+	if(keystate[SDLK_UP])
+	{
+		//calculate the z-axis vector and move camera in the positive direction
+		vec3 forward(cameraRot[2][0], cameraRot[2][1], cameraRot[2][2]);
+		cameraPos += posDelta * forward;
+	}
+	if(keystate[SDLK_DOWN])
+	{	
+		//calculate the z-axis vector and move camera in the negative direction
+		vec3 forward(cameraRot[2][0], cameraRot[2][1], cameraRot[2][2]);
+		cameraPos -= posDelta * forward;
+		
+	}
+	if(keystate[SDLK_LEFT])
+	{
+		//decrease the rotation angle and update rotation matrix 
+		yaw -= rotDelta;
+		updateRotationMatrix();
+	}
+	if(keystate[SDLK_RIGHT])
+	{
+		//increase the rotation angle and update the rotation matrix
+		yaw += rotDelta;
+		updateRotationMatrix();
+	}
 }
 
 void Draw()
@@ -90,7 +123,7 @@ void Draw()
 
 void VertexShader(const vec3& v, ivec2& p)
 {
-	vec3 P = v - cameraPos;
+	vec3 P = (v - cameraPos) * cameraRot;
 	p.x = (int) (focalLength * (P.x / P.z) + ((float) SCREEN_WIDTH / 2.0f));
 	p.y = (int) (focalLength * (P.y / P.z) + ((float) SCREEN_HEIGHT / 2.0f));
 }
@@ -136,4 +169,10 @@ void DrawPolygonEdges(const vector<vec3>& vertices)
 		vec3 color(1,1,1);
 		DrawLineSDL(screen, projectedVertices[i], projectedVertices[j], color);
 	}
+}
+
+void updateRotationMatrix() {
+	//Calcuate new columns for the camera's rotation matrix
+	cameraRot[0] = vec3(cos(yaw), 0, -sin(yaw));
+	cameraRot[2] = vec3(sin(yaw), 0, cos(yaw));
 }
