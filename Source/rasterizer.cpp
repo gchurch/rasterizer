@@ -49,7 +49,7 @@ void DrawPolygon(const vector<vec3>& vertices);
 int main( int argc, char* argv[] )
 {
 	//Load in the scene
-	/*LoadTestModel(triangles);
+	LoadTestModel(triangles);
 
 	screen = InitializeSDL( SCREEN_WIDTH, SCREEN_HEIGHT );
 	t = SDL_GetTicks();	// Set start value for timer.
@@ -60,12 +60,12 @@ int main( int argc, char* argv[] )
 		Draw();
 	}
 
-	SDL_SaveBMP( screen, "screenshot.bmp" );*/
+	SDL_SaveBMP( screen, "screenshot.bmp" );
 
-	vector<ivec2> vertexPixels(3);
-	vertexPixels[0] = ivec2(374, 374);
+	/*vector<ivec2> vertexPixels(3);
+	vertexPixels[0] = ivec2(125, 374);
 	vertexPixels[1] = ivec2(374, 374);
-	vertexPixels[2] = ivec2(500, 500);
+	vertexPixels[2] = ivec2(499, 499);
 	vector<ivec2> leftPixels;
 	vector<ivec2> rightPixels;
 	ComputePolygonRows(vertexPixels, leftPixels, rightPixels);
@@ -77,8 +77,20 @@ int main( int argc, char* argv[] )
 		<< "End: ("
 		<< rightPixels[row].x << ","
 		<< rightPixels[row].y << "). " << endl;
+	}*/
+
+
+
+	/*ivec2 a(499,499);
+	ivec2 b(125,374);
+	ivec2 delta = glm::abs(a - b);
+	int pixels = glm::max(delta.x, delta.y) + 1;
+	vector<ivec2> line(pixels);
+	Interpolate(a, b, line);
+	for(int i = 0; i < line.size(); i++) {
+		printf("(%d, %d)\n", line[i].x, line[i].y);
 	}
-	return 0;
+	return 0;*/
 }
 
 void Update()
@@ -155,12 +167,16 @@ void VertexShader(const vec3& v, ivec2& p)
 void Interpolate(ivec2 a, ivec2 b, vector<ivec2>& result)
 {
 	int N = result.size();
-	vec2 step = vec2(b-a) / float(max(N-1,1));
+	float stepX = (float) (b.x - a.x) / float(max(N-1,1));
+	float stepY = (float) (b.y - a.y) / float(max(N-1,1));
+	//vec2 step = vec2(b-a) / float(max(N-1,1));
 	vec2 current(a);
-	for(int i = 0; i < N; ++i)
+	for(int i = 0; i < N; i++)
 	{
-		result[i] = current;
-		current += step;
+		result[i].x = round(current.x);
+		result[i].y = round(current.y);
+		current.x = current.x + stepX;
+		current.y = current.y + stepY;
 	}
 }
 
@@ -208,19 +224,18 @@ void ComputePolygonRows(const vector<ivec2>& vertexPixels, vector<ivec2>& leftPi
 
 	for(unsigned int i = 0; i < vertexPixels.size(); i++) 
 	{
-		printf("v%d: (%d, %d), ", i, vertexPixels[i].x, vertexPixels[i].y);
-
 		if(vertexPixels[i].y < minY)
 			minY = vertexPixels[i].y;
 		if(vertexPixels[i].y > maxY)
 			maxY = vertexPixels[i].y;
 	}
-	printf("\n");
 
-	leftPixels.resize(maxY - minY + 1);
-	rightPixels.resize(maxY - minY + 1);
+	unsigned int numRows = maxY - minY + 1;
 
-	for(unsigned int i = 0; i < leftPixels.size(); i++)
+	leftPixels.resize(numRows);
+	rightPixels.resize(numRows);
+
+	for(unsigned int i = 0; i < numRows; i++)
 	{
 		leftPixels[i].x = numeric_limits<int>::max();
 		rightPixels[i].x = numeric_limits<int>::min();
@@ -240,10 +255,9 @@ void ComputePolygonRows(const vector<ivec2>& vertexPixels, vector<ivec2>& leftPi
 		Interpolate(a,b,line);
 		for(unsigned int k = 0; k < line.size(); k++)
 		{
-			printf("%d ", k);
-			if(leftPixels[line[k].y - minY].x > line[k].x) 
+			if(leftPixels[line[k].y - minY].x > line[k].x)
 			{
-				leftPixels[line[k].y - minY].x = line[k].x; 
+				leftPixels[line[k].y - minY].x = line[k].x;
 				leftPixels[line[k].y - minY].y = line[k].y;
 			}
 			if(rightPixels[line[k].y - minY].x < line[k].x)
@@ -251,12 +265,8 @@ void ComputePolygonRows(const vector<ivec2>& vertexPixels, vector<ivec2>& leftPi
 				rightPixels[line[k].y - minY].x = line[k].x;
 				rightPixels[line[k].y - minY].y = line[k].y;
 			}
-			printf("done\n");
 		}
-		printf("fin\n");
 	}
-
-	printf("finished\n");
 }
 
 void DrawPolygonRows(const vector<ivec2>& leftPixels, const vector<ivec2>& rightPixels)
