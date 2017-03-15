@@ -164,7 +164,7 @@ void Draw()
 		vertices[2] = triangles[i].v2;
 
 		//draw the triangle
-		DrawPolygon(vertices);
+		DrawPolygon_depth(vertices);
 
 	}
 
@@ -372,39 +372,43 @@ void DrawPolygon(const vector<vec3>& vertices)
 
 
 
-
-
-
-//possible bug region
+//Interpolate the points on a line between vectors a and b and put the points into result
 void Interpolate(Pixel a, Pixel b, vector<Pixel>& result) {
 
+	//Calculate the steps needed in the x and y direction, and also the step needed for the zinv
 	int N = result.size();
 	float stepX = (float) (b.x - a.x) / float(max(N-1,1));
 	float stepY = (float) (b.y - a.y) / float(max(N-1,1));
 	float stepZinv = (b.zinv - a.zinv) / float(max(N-1,1));
 
-
+	//Set the accumulator values to the same as vector a
 	float currentX = (float) a.x;
 	float currentY = (float) a.y;
 	float currentZinv = (float) a.zinv;
 
-
+	//Calculate each point on the line
 	for(int i = 0; i < N; i++)
 	{
+		//Store the interpolated point in the result list
 		result[i].x = round(currentX);
 		result[i].y = round(currentY);
 		result[i].zinv = currentZinv;
+
+		//Update the accumulator values
 		currentX += stepX;
 		currentY += stepY;
 		currentZinv += stepZinv;
 	}
 }
 
+//Calculate the leftPixels and rightPixels lists from the vertex coordinats of the polygon
 void ComputePolygonRows(const vector<Pixel>& vertexPixels, vector<Pixel>& leftPixels, vector<Pixel>& rightPixels) {
 		
+	//The maximum and minimum integer values
 	int minY = numeric_limits<int>::max();
 	int maxY = numeric_limits<int>::min();
 
+	//Calculate the smallest and largest y values of the polygon
 	for(unsigned int i = 0; i < vertexPixels.size(); i++) 
 	{
 		if(vertexPixels[i].y < minY)
@@ -413,11 +417,13 @@ void ComputePolygonRows(const vector<Pixel>& vertexPixels, vector<Pixel>& leftPi
 			maxY = vertexPixels[i].y;
 	}
 
+	//resize the leftPixels and rightPixels lists to the correct size
 	unsigned int numRows = maxY - minY + 1;
-
 	leftPixels.resize(numRows);
 	rightPixels.resize(numRows);
 
+	//set the leftPixels x values to the maximum integer value and
+	//the rightPixels x values to the minimum integer value
 	for(unsigned int i = 0; i < numRows; i++)
 	{
 		leftPixels[i].x = numeric_limits<int>::max();
@@ -425,25 +431,39 @@ void ComputePolygonRows(const vector<Pixel>& vertexPixels, vector<Pixel>& leftPi
 	}
 
 
+	//Iterate through all of the vertexes
 	int V = vertexPixels.size();
-
 	for(int i = 0; i < V; ++i)
 	{
+		//i is the index of the current vertex and j is the index of the next vertex
 		int j = (i+1)%V;
-		vec3 color(1,1,1);
+		
+		//a is the current vertex and b is the next vertex
 		Pixel a = vertexPixels[i];
 		Pixel b = vertexPixels[j];
+
+		//calculate the number of pixels needed for the line between a and b		
 		int pixels = max(abs(a.x - b.x), abs(a.y - b.y)) + 1;
 		vector<Pixel> line(pixels);
+
+		//Interpolate the points on the line between a and b
 		Interpolate(a,b,line);
+	
+		//Iterate through all of the interpolated points on the line		
 		for(unsigned int k = 0; k < line.size(); k++)
 		{
+
+			//if the x value for this y coordinate is less than the current x value for
+			//this y coordinate then update the entry with the current point values
 			if(leftPixels[line[k].y - minY].x > line[k].x)
 			{
 				leftPixels[line[k].y - minY].x = line[k].x;
 				leftPixels[line[k].y - minY].y = line[k].y;
 				leftPixels[line[k].y - minY].zinv = line[k].zinv;
 			}
+
+			//if the x value for this y coordinate is greater than the current x value for
+			//this y coordinate then update the entry with the current point values
 			if(rightPixels[line[k].y - minY].x < line[k].x)
 			{
 				rightPixels[line[k].y - minY].x = line[k].x;
@@ -454,37 +474,64 @@ void ComputePolygonRows(const vector<Pixel>& vertexPixels, vector<Pixel>& leftPi
 	}
 }
 
+//Draw the polygon given the leftmost and rightmost pixel positions for each y value
 void DrawPolygonRows(const vector<Pixel>& leftPixels, const vector<Pixel>& rightPixels) {
-	for(unsigned int i = 0; i < leftPixels.size(); i++) {
+	//Iterate through all the leftPixels and rightPixel elements
+	unsigned int V = leftPixels.size();
+	for(unsigned int i = 0; i < V; i++) {
+
+		//Calculate the number of pixels needed for the line between corresponding leftPixels and rightPixels elements
 		int pixels = rightPixels[i].x - leftPixels[i].x;
 		vector<Pixel> line(pixels);
+
+		//Interpolate between these pixels (as we need to calculate the zinv values for each pixel)
 		Interpolate(leftPixels[i], rightPixels[i], line);
+
+		//Iterate over all the interpolated pixels
 		for(int j = 0; j < pixels; j++) {
+			//If the pixels zinv value is greater than the corresponding one in the buffer, then draw the pixel
 			if(line[j].zinv > depthBuffer[line[j].y][line[j].x]) {
+				//update the draw buffer
 				depthBuffer[line[j].y][line[j].x] = line[j].zinv;
+				//draw the pixel with correspondng color
 				PutPixelSDL(screen, line[j].x, line[j].y, currentColor);
 			}		
 		}
 	}
 }
 
+//Project the 3d point v to 2D
 void VertexShader(const vec3& v, Pixel& p) {
+
+	//get the relative position of v from C in the current coordinate system
 	vec3 C = (v - cameraPos) * cameraRot;
+
+	//project the x and y values
 	p.x = (int) (focalLength * (C.x / C.z) + ((float) SCREEN_WIDTH / 2.0f));
 	p.y = (int) (focalLength * (C.y / C.z) + ((float) SCREEN_HEIGHT / 2.0f));
+
+	//calculat the inverse of the depth of the point
 	p.zinv = 1.0f/(float)C.z;
 }
 
+//Draw a polygon given its vertices, taking into account depth
 void DrawPolygon_depth(const vector<vec3>& vertices)
 {
-	int V = vertices.size();
 
+	//Calculate the projection of the polygons vertexes
+	int V = vertices.size();
 	vector<Pixel> vertexPixels(V);
-	for(int i = 0; i < V; i++)
+	for(int i = 0; i < V; i++) {
 		VertexShader(vertices[i], vertexPixels[i]);
+	}
 	
+	//lists to store the left most and right post pixel x values for each y value
 	vector<Pixel> leftPixels;
 	vector<Pixel> rightPixels;
+
+	//Compute the leftPixels and rightPixels lists from the vertexes
 	ComputePolygonRows(vertexPixels, leftPixels, rightPixels);
+
+	//Draw the polygon
 	DrawPolygonRows(leftPixels, rightPixels);
 }
