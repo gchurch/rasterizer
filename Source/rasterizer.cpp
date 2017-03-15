@@ -30,13 +30,16 @@ float rotDelta = 0.01;
 //Scene information
 vector<Triangle> triangles;
 
+//The color of the current triangle being drawn
 vec3 currentColor;
 
+//The depth buffer for the screen
 float depthBuffer[SCREEN_HEIGHT][SCREEN_WIDTH];
 
 //Floating point inaccuracy constant
 float epsilon = 0.00001;
 
+//Data structure holding information for each pixel
 struct Pixel {
 	int x;
 	int y;
