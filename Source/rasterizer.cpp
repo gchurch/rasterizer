@@ -145,6 +145,7 @@ void Draw()
 	if( SDL_MUSTLOCK(screen) )
 		SDL_LockSurface(screen);
 
+	//reset the depth buffer
 	for(int y = 0; y < SCREEN_HEIGHT; y++) {
 		for(int x = 0; x < SCREEN_WIDTH; x++) {
 			depthBuffer[y][x] = 0;
@@ -481,7 +482,7 @@ void DrawPolygonRows(const vector<Pixel>& leftPixels, const vector<Pixel>& right
 	for(unsigned int i = 0; i < V; i++) {
 
 		//Calculate the number of pixels needed for the line between corresponding leftPixels and rightPixels elements
-		int pixels = rightPixels[i].x - leftPixels[i].x;
+		int pixels = rightPixels[i].x - leftPixels[i].x + 1;
 		vector<Pixel> line(pixels);
 
 		//Interpolate between these pixels (as we need to calculate the zinv values for each pixel)
