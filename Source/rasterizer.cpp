@@ -34,6 +34,9 @@ vec3 currentColor;
 
 float depthBuffer[SCREEN_HEIGHT][SCREEN_WIDTH];
 
+//Floating point inaccuracy constant
+float epsilon = 0.00001;
+
 struct Pixel {
 	int x;
 	int y;
@@ -491,7 +494,7 @@ void DrawPolygonRows(const vector<Pixel>& leftPixels, const vector<Pixel>& right
 		//Iterate over all the interpolated pixels
 		for(int j = 0; j < pixels; j++) {
 			//If the pixels zinv value is greater than the corresponding one in the buffer, then draw the pixel
-			if(line[j].zinv > depthBuffer[line[j].y][line[j].x]) {
+			if(line[j].zinv > depthBuffer[line[j].y][line[j].x] + epsilon) {
 				//update the draw buffer
 				depthBuffer[line[j].y][line[j].x] = line[j].zinv;
 				//draw the pixel with correspondng color
