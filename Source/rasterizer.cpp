@@ -46,6 +46,9 @@ struct Pixel {
 	float zinv;
 };
 
+struct Vertex {
+	vec3 position;
+};
 /* ----------------------------------------------------------------------------*/
 /* FUNCTIONS                                                                   */
 
@@ -64,8 +67,10 @@ void DrawPolygon(const vector<vec3>& vertices);
 void Interpolate(Pixel a, Pixel b, vector<Pixel>& result);
 void ComputePolygonRows(const vector<Pixel>& vertexPixels, vector<Pixel>& leftPixels, vector<Pixel>& rightPixels);
 void DrawPolygonRows(const vector<Pixel>& leftPixels, const vector<Pixel>& rightPixels);
-void VertexShader(const vec3& v, Pixel& p);
-void DrawPolygon_depth(const vector<vec3>& vertices);
+void VertexShader(const Vertex& v, Pixel& p);
+void DrawPolygon_depth(const vector<Vertex>& vertices);
+
+void PixelShader(const Pixel& p);
 
 int main( int argc, char* argv[] )
 {
@@ -165,10 +170,10 @@ void Draw()
 		currentColor = triangles[i].color;
 
 		//Create a list of the triangles vertices
-		vector<vec3> vertices(3);
-		vertices[0] = triangles[i].v0;
-		vertices[1] = triangles[i].v1;
-		vertices[2] = triangles[i].v2;
+		vector<Vertex> vertices(3);
+		vertices[0].position = triangles[i].v0;
+		vertices[1].position = triangles[i].v1;
+		vertices[2].position = triangles[i].v2;
 
 		//draw the triangle
 		DrawPolygon_depth(vertices);
@@ -497,21 +502,16 @@ void DrawPolygonRows(const vector<Pixel>& leftPixels, const vector<Pixel>& right
 		//Iterate over all the interpolated pixels
 		for(int j = 0; j < pixels; j++) {
 			//If the pixels zinv value is greater than the corresponding one in the buffer, then draw the pixel
-			if(line[j].zinv > depthBuffer[line[j].y][line[j].x] + epsilon) {
-				//update the draw buffer
-				depthBuffer[line[j].y][line[j].x] = line[j].zinv;
-				//draw the pixel with correspondng color
-				PutPixelSDL(screen, line[j].x, line[j].y, currentColor);
-			}		
+			PixelShader(line[j]);
 		}
 	}
 }
 
 //Project the 3d point v to 2D
-void VertexShader(const vec3& v, Pixel& p) {
+void VertexShader(const Vertex& v, Pixel& p) {
 
 	//get the relative position of v from C in the current coordinate system
-	vec3 C = (v - cameraPos) * cameraRot;
+	vec3 C = (v.position - cameraPos) * cameraRot;
 
 	//project the x and y values
 	p.x = (int) (focalLength * (C.x / C.z) + ((float) SCREEN_WIDTH / 2.0f));
@@ -521,8 +521,17 @@ void VertexShader(const vec3& v, Pixel& p) {
 	p.zinv = 1.0f/(float)C.z;
 }
 
+void PixelShader(const Pixel& p) {
+	//If pixels depth is less than the current pixels depth in the image
+	//then update the image
+	if(p.zinv > depthBuffer[p.y][p.x] + epsilon) {
+		depthBuffer[p.y][p.x] = p.zinv;
+		PutPixelSDL(screen, p.x, p.y, currentColor);
+	}
+}
+
 //Draw a polygon given its vertices, taking into account depth
-void DrawPolygon_depth(const vector<vec3>& vertices)
+void DrawPolygon_depth(const vector<Vertex>& vertices)
 {
 
 	//Calculate the projection of the polygons vertexes
