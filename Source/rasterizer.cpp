@@ -52,6 +52,7 @@ struct Vertex {
 };
 
 vec3 lightPos(0,-0.5, -0.7);
+float lightPosStep = 0.1f;
 vec3 lightPower = 14.0f * vec3(1,1,1);
 vec3 indirectLightPowerPerArea = 0.5f * vec3(1,1,1);
 
@@ -154,6 +155,32 @@ void Update()
 		//increase the rotation angle and update the rotation matrix
 		yaw += rotDelta;
 		updateRotationMatrix();
+	}
+
+	//Move light position depending on key press
+	if(keystate[SDLK_w])
+	{
+		lightPos.z += lightPosStep;
+	}
+	if(keystate[SDLK_s])
+	{
+		lightPos.z -= lightPosStep;
+	}
+	if(keystate[SDLK_a])
+	{
+		lightPos.x -= lightPosStep;
+	}
+	if(keystate[SDLK_d])
+	{
+		lightPos.x += lightPosStep;
+	}
+	if(keystate[SDLK_q])
+	{
+		lightPos.y -= lightPosStep;
+	}
+	if(keystate[SDLK_e])
+	{
+		lightPos.y += lightPosStep;
 	}
 }
 
