@@ -44,18 +44,19 @@ struct Pixel {
 	int x;
 	int y;
 	float zinv;
-	vec3 illumination;
+	vec3 pos3d;
 };
 
 struct Vertex {
 	vec3 position;
-	vec3 normal;
-	vec3 reflectance;
 };
 
 vec3 lightPos(0,-0.5, -0.7);
 vec3 lightPower = 14.0f * vec3(1,1,1);
 vec3 indirectLightPowerPerArea = 0.5f * vec3(1,1,1);
+
+vec3 currentNormal;
+vec3 currentReflectance;
 /* ----------------------------------------------------------------------------*/
 /* FUNCTIONS                                                                   */
 
@@ -182,14 +183,9 @@ void Draw()
 		vertices[0].position = triangles[i].v0;
 		vertices[1].position = triangles[i].v1;
 		vertices[2].position = triangles[i].v2;
-		//initialise the normal
-		vertices[0].normal = triangles[i].normal;
-		vertices[1].normal = triangles[i].normal;
-		vertices[2].normal = triangles[i].normal;
-		//initialise the reflectance
-		vertices[0].reflectance = currentColor;
-		vertices[1].reflectance = currentColor;
-		vertices[2].reflectance = currentColor;
+		
+		currentNormal = triangles[i].normal;
+		currentReflectance = triangles[i].color;
 
 		//draw the triangle
 		DrawPolygon_depth(vertices);
@@ -408,13 +404,13 @@ void Interpolate(Pixel a, Pixel b, vector<Pixel>& result) {
 	float stepX = (float) (b.x - a.x) / float(max(N-1,1));
 	float stepY = (float) (b.y - a.y) / float(max(N-1,1));
 	float stepZinv = (b.zinv - a.zinv) / float(max(N-1,1));
-	vec3 stepIllumination = (b.illumination - a.illumination) / float(max(N-1,1));
+	vec3 stepPos3d = (b.pos3d - a.pos3d) / float(max(N-1,1));
 
 	//Set the accumulator values to the same as vector a
 	float currentX = (float) a.x;
 	float currentY = (float) a.y;
 	float currentZinv = (float) a.zinv;
-	vec3 currentIllumination = a.illumination;
+	vec3 currentPos3d = a.pos3d;
 
 	//Calculate each point on the line
 	for(int i = 0; i < N; i++)
@@ -423,13 +419,13 @@ void Interpolate(Pixel a, Pixel b, vector<Pixel>& result) {
 		result[i].x = round(currentX);
 		result[i].y = round(currentY);
 		result[i].zinv = currentZinv;
-		result[i].illumination = currentIllumination;
+		result[i].pos3d = currentPos3d;
 
 		//Update the accumulator values
 		currentX += stepX;
 		currentY += stepY;
 		currentZinv += stepZinv;
-		currentIllumination += stepIllumination;
+		currentPos3d += stepPos3d;
 	}
 }
 
@@ -492,7 +488,7 @@ void ComputePolygonRows(const vector<Pixel>& vertexPixels, vector<Pixel>& leftPi
 				leftPixels[line[k].y - minY].x = line[k].x;
 				leftPixels[line[k].y - minY].y = line[k].y;
 				leftPixels[line[k].y - minY].zinv = line[k].zinv;
-				leftPixels[line[k].y - minY].illumination = line[k].illumination;
+				leftPixels[line[k].y - minY].pos3d = line[k].pos3d;
 			}
 
 			//if the x value for this y coordinate is greater than the current x value for
@@ -502,7 +498,7 @@ void ComputePolygonRows(const vector<Pixel>& vertexPixels, vector<Pixel>& leftPi
 				rightPixels[line[k].y - minY].x = line[k].x;
 				rightPixels[line[k].y - minY].y = line[k].y;
 				rightPixels[line[k].y - minY].zinv = line[k].zinv;
-				rightPixels[line[k].y - minY].illumination = line[k].illumination;
+				rightPixels[line[k].y - minY].pos3d = line[k].pos3d;
 			}
 		}
 	}
@@ -556,36 +552,41 @@ void VertexShader(const Vertex& v, Pixel& p) {
 	p.x = (int) (focalLength * (C.x / C.z) + ((float) SCREEN_WIDTH / 2.0f));
 	p.y = (int) (focalLength * (C.y / C.z) + ((float) SCREEN_HEIGHT / 2.0f));
 
-	//calculat the inverse of the depth of the point
+	//calculate the inverse of the depth of the point
 	p.zinv = 1.0f/(float)C.z;
 
+	p.pos3d = v.position * p.zinv;
+}
+
+void PixelShader(const Pixel& p) {
+	
 	//Pi constant
 	const float pi = 3.1415926535897;
 
+	vec3 pos3d = p.pos3d / p.zinv;
+
 	//distance from intersection point to light source
-	float radius = distanceBetweenPoints(v.position, lightPos);
+	float radius = distanceBetweenPoints(pos3d, lightPos);
 
 	//The power per area at this point
 	vec3 B = lightPower / (4 * pi * pow(radius,3));
 
 	//unit vector describing normal of surface
-	vec3 n = v.normal;
+	vec3 n = currentNormal;
 
 	//unit vector describing direction from surface point to light source
-	vec3 r = unitVectorToLightSource(v.position);
+	vec3 r = unitVectorToLightSource(pos3d);
 
 	//fraction of the power per area depending on surface's angle from light source
 	vec3 D = B * max(dotProduct(r,n),0.0f);
 
-	p.illumination = v.reflectance * (D + indirectLightPowerPerArea);
-}
+	vec3 illumination = currentReflectance * (D + indirectLightPowerPerArea);
 
-void PixelShader(const Pixel& p) {
 	//If pixels depth is less than the current pixels depth in the image
 	//then update the image
 	if(p.zinv > depthBuffer[p.y][p.x] + epsilon) {
 		depthBuffer[p.y][p.x] = p.zinv;
-		PutPixelSDL(screen, p.x, p.y, p.illumination);
+		PutPixelSDL(screen, p.x, p.y, illumination);
 	}
 }
 
