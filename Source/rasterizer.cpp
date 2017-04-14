@@ -344,19 +344,20 @@ vec3 unitVectorToLightSource(vec3 a) {
 	return normalize(v);
 }
 
+Vertex TransformVertex(const Vertex& v) {
+	Vertex tv = {(v.position - cameraPos) * cameraRot};
+	return tv;
+}
 
 //Project the 3d point v to 2D
-void VertexShader(const Vertex& v, Pixel& p) {
-
-	//get the relative position of v from C in the current coordinate system
-	vec3 C = (v.position - cameraPos) * cameraRot;
+void VertexShader(const Vertex& v, const Vertex& t, Pixel& p) {
 
 	//project the x and y values
-	p.x = (int) (focalLength * (C.x / C.z) + ((float) SCREEN_WIDTH / 2.0f));
-	p.y = (int) (focalLength * (C.y / C.z) + ((float) SCREEN_HEIGHT / 2.0f));
+	p.x = (int) (focalLength * (t.position.x / t.position.z) + ((float) SCREEN_WIDTH / 2.0f));
+	p.y = (int) (focalLength * (t.position.y / t.position.z) + ((float) SCREEN_HEIGHT / 2.0f));
 
 	//calculate the inverse of the depth of the point
-	p.zinv = 1.0f/(float)C.z;
+	p.zinv = 1.0f/(float)t.position.z;
 
 	p.pos3d = v.position * p.zinv;
 }
@@ -396,12 +397,18 @@ void PixelShader(const Pixel& p) {
 //Draw a polygon given its vertices, taking into account depth
 void DrawPolygon(const vector<Vertex>& vertices)
 {
+	int V = vertices.size();
+
+	vector<Vertex> transformedVertices(V);
+	for(int i = 0; i < V; i++) {
+		transformedVertices[i] = TransformVertex(vertices[i]);
+	}
+
 
 	//Calculate the projection of the polygons vertexes
-	int V = vertices.size();
 	vector<Pixel> vertexPixels(V);
 	for(int i = 0; i < V; i++) {
-		VertexShader(vertices[i], vertexPixels[i]);
+		VertexShader(vertices[i], transformedVertices[i], vertexPixels[i]);
 	}
 	
 	//lists to store the left most and right post pixel x values for each y value
