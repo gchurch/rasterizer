@@ -307,9 +307,6 @@ void ComputePolygonRows(const vector<Pixel>& vertexPixels, vector<Pixel>& leftPi
 			}
 		}
 	}
-	for(int i = 0; i < numRows; i++) {
-		printf("left: (%d,%d)\t right: (%d,%d)\n", leftPixels[i].x, leftPixels[i].y, rightPixels[i].x, rightPixels[i].y);
-	}
 }
 
 //Draw the polygon given the leftmost and rightmost pixel positions for each y value
@@ -369,7 +366,7 @@ void VertexShader(const Vertex& v, Pixel& p) {
 void PixelShader(const Pixel& p) {
 	
 	//Pi constant
-	const float pi = 3.1415926535897;
+	/*const float pi = 3.1415926535897;
 
 	vec3 pos3d = p.pos3d / p.zinv;
 
@@ -386,9 +383,9 @@ void PixelShader(const Pixel& p) {
 	vec3 r = unitVectorToLightSource(pos3d);
 
 	//fraction of the power per area depending on surface's angle from light source
-	vec3 D = B * max(dotProduct(r,n),0.0f);
+	vec3 D = B * max(dotProduct(r,n),0.0f);*/
 
-	vec3 illumination = currentReflectance * (D + indirectLightPowerPerArea);
+	vec3 illumination = currentReflectance;// * (D + indirectLightPowerPerArea);
 
 	//If pixels depth is less than the current pixels depth in the image
 	//then update the image
@@ -410,15 +407,14 @@ bool Intersection(const Vertex a, const Vertex b) {
 	}
 }
 
-Vertex ComputeIntersection(const Vertex a, const Vertex b) {
-	float xmax = a.w * SCREEN_WIDTH / 2;
+Vertex ComputeIntersection(const Vertex a, const Vertex b, float e) {
 	float divide = b.c.x - a.c.x;
-	float y = a.c.y + (b.c.y - a.c.y) * (xmax - a.c.x) / divide;
-	float z = a.c.z + (b.c.z - a.c.z) * (xmax - a.c.x) / divide;
-	float x = xmax;
+	float y = a.c.y + (b.c.y - a.c.y) * (e - a.c.x) / divide;
+	float z = a.c.z + (b.c.z - a.c.z) * (e - a.c.x) / divide;
+	float x = e;
 
 	Vertex output;
-	output.c = vec3(x, y, a.c.z);
+	output.c = vec3(x, y, z);
 	output.w = a.w;
 		
 	return output;
@@ -441,30 +437,33 @@ bool Clip(vector<Vertex>& vertices) {
 	vector<Vertex> inputList = outputList;
 	outputList.clear();
 
-	Vertex start = inputList.back();
+	//Vertex start = inputList.back();
 
 	for(unsigned int i = 0; i < inputList.size(); i++) {
-		Vertex end = inputList[i];
-		if(end.c.x < end.w * SCREEN_WIDTH / 2) {
-			if(start.c.x > start.w * SCREEN_WIDTH / 2) {
+		Vertex start = inputList[i];
+		Vertex end = inputList[(i+1) % inputList.size()];
+		if(end.c.x < end.w * (float) SCREEN_WIDTH / 2.0f) {
+			if(start.c.x > start.w * (float) SCREEN_WIDTH / 2.0f) {
 				if(Intersection(start,end)) {
-					outputList.push_back(ComputeIntersection(start,end));
+					outputList.push_back(ComputeIntersection(start, end, start.w * (float) SCREEN_WIDTH / 2.0f));
 				}
 			}
 			outputList.push_back(end);
 		}
-		else if(start.c.x < start.w * SCREEN_WIDTH / 2) {
+		else if(start.c.x < start.w * (float) SCREEN_WIDTH / 2.0f) {
 			if(Intersection(start, end)) {
-				outputList.push_back(ComputeIntersection(start, end));
+				outputList.push_back(ComputeIntersection(start, end, end.w * (float) SCREEN_WIDTH / 2.0f));
 			}
 		}
-		start.c.x = end.c.x;
-		start.c.y = end.c.y;
-		start.c.z = end.c.z;
-		start.w = end.w;
 	}
 
 	vertices = outputList;
+
+	/*for(unsigned int i = 0; i < vertices.size(); i++) {
+		vertices[i].c.x = vertices[i].c.x * focalLength / vertices[i].c.z;
+		vertices[i].c.y = vertices[i].c.y * focalLength / vertices[i].c.z;
+		vertices[i].c.z = vertices[i].c.z * focalLength / vertices[i].c.z;
+	}*/
 
 	return true;
 }
