@@ -366,7 +366,7 @@ void VertexShader(const Vertex& v, Pixel& p) {
 void PixelShader(const Pixel& p) {
 	
 	//Pi constant
-	/*const float pi = 3.1415926535897;
+	const float pi = 3.1415926535897;
 
 	vec3 pos3d = p.pos3d / p.zinv;
 
@@ -383,9 +383,9 @@ void PixelShader(const Pixel& p) {
 	vec3 r = unitVectorToLightSource(pos3d);
 
 	//fraction of the power per area depending on surface's angle from light source
-	vec3 D = B * max(dotProduct(r,n),0.0f);*/
+	vec3 D = B * max(dotProduct(r,n),0.0f);
 
-	vec3 illumination = currentReflectance;// * (D + indirectLightPowerPerArea);
+	vec3 illumination = currentReflectance * (D + indirectLightPowerPerArea);
 
 	//If pixels depth is less than the current pixels depth in the image
 	//then update the image
@@ -516,7 +516,7 @@ void DrawPolygon(vector<Vertex>& vertices)
 	}*/
 
 	//Clip polygon
-	Clip(vertices);
+	//Clip(vertices);
 
 	/*printf("new:\n");
 	for(unsigned int i = 0; i < vertices.size(); i++) {
