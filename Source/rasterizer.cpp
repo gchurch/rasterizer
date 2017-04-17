@@ -47,6 +47,7 @@ struct Pixel {
 struct Vertex {
 	vec3 o;	//position in original coordinate system
 	vec3 c; //position in current coordinate system
+	float w; 
 };
 
 vec3 lightPos(0,-0.5, -0.7);
@@ -306,6 +307,9 @@ void ComputePolygonRows(const vector<Pixel>& vertexPixels, vector<Pixel>& leftPi
 			}
 		}
 	}
+	for(int i = 0; i < numRows; i++) {
+		printf("left: (%d,%d)\t right: (%d,%d)\n", leftPixels[i].x, leftPixels[i].y, rightPixels[i].x, rightPixels[i].y);
+	}
 }
 
 //Draw the polygon given the leftmost and rightmost pixel positions for each y value
@@ -388,10 +392,81 @@ void PixelShader(const Pixel& p) {
 
 	//If pixels depth is less than the current pixels depth in the image
 	//then update the image
-	if(p.zinv > depthBuffer[p.y][p.x] + epsilon) {
-		depthBuffer[p.y][p.x] = p.zinv;
-		PutPixelSDL(screen, p.x, p.y, illumination);
+	if(p.x >= 0 && p.x <= SCREEN_WIDTH && p.y >= 0 && p.y <= SCREEN_HEIGHT) {
+		if(p.zinv > depthBuffer[p.y][p.x] + epsilon) {
+			depthBuffer[p.y][p.x] = p.zinv;
+			PutPixelSDL(screen, p.x, p.y, illumination);
+		}
 	}
+}
+
+bool Intersection(const Vertex a, const Vertex b) {
+	float divide = b.c.x - a.c.x;
+	if(divide < epsilon && divide > -epsilon) {
+		return false;
+	}
+	else {
+		return true;
+	}
+}
+
+Vertex ComputeIntersection(const Vertex a, const Vertex b) {
+	float xmax = a.w * SCREEN_WIDTH / 2;
+	float divide = b.c.x - a.c.x;
+	float y = a.c.y + (b.c.y - a.c.y) * (xmax - a.c.x) / divide;
+	float z = a.c.z + (b.c.z - a.c.z) * (xmax - a.c.x) / divide;
+	float x = xmax;
+
+	Vertex output;
+	output.c = vec3(x, y, a.c.z);
+	output.w = a.w;
+		
+	return output;
+}
+
+void ClipSpace(vector<Vertex>& vertices) {
+	for(unsigned int i = 0; i < vertices.size(); i++) {
+		vertices[i].w = vertices[i].c.z / focalLength;
+	}
+}
+
+bool Clip(vector<Vertex>& vertices) {
+
+	ClipSpace(vertices);
+
+	int V = vertices.size();
+
+	vector<Vertex> outputList = vertices;
+
+	vector<Vertex> inputList = outputList;
+	outputList.clear();
+
+	Vertex start = inputList.back();
+
+	for(unsigned int i = 0; i < inputList.size(); i++) {
+		Vertex end = inputList[i];
+		if(end.c.x < end.w * SCREEN_WIDTH / 2) {
+			if(start.c.x > start.w * SCREEN_WIDTH / 2) {
+				if(Intersection(start,end)) {
+					outputList.push_back(ComputeIntersection(start,end));
+				}
+			}
+			outputList.push_back(end);
+		}
+		else if(start.c.x < start.w * SCREEN_WIDTH / 2) {
+			if(Intersection(start, end)) {
+				outputList.push_back(ComputeIntersection(start, end));
+			}
+		}
+		start.c.x = end.c.x;
+		start.c.y = end.c.y;
+		start.c.z = end.c.z;
+		start.w = end.w;
+	}
+
+	vertices = outputList;
+
+	return true;
 }
 
 //Draw a polygon given its vertices, taking into account depth
@@ -401,6 +476,19 @@ void DrawPolygon(vector<Vertex>& vertices)
 	//Transform world
 	for(unsigned int i = 0; i < vertices.size(); i++) {
 		TransformVertex(vertices[i]);
+	}
+
+	printf("old:\n");
+	for(unsigned int i = 0; i < vertices.size(); i++) {
+		printf("(%f,%f,%f)\n", vertices[i].c.x, vertices[i].c.y, vertices[i].c.z);
+	}
+
+	//Clip polygon
+	Clip(vertices);
+
+	printf("new:\n");
+	for(unsigned int i = 0; i < vertices.size(); i++) {
+		printf("(%f,%f,%f)\n", vertices[i].c.x, vertices[i].c.y, vertices[i].c.z);
 	}
 
 	//Calculate the projection of the polygons vertexes
@@ -415,7 +503,9 @@ void DrawPolygon(vector<Vertex>& vertices)
 
 	//Compute the leftPixels and rightPixels lists from the vertexes
 	ComputePolygonRows(vertexPixels, leftPixels, rightPixels);
+	printf("compute polygon rows done\n");
 
 	//Draw the polygon
 	DrawPolygonRows(leftPixels, rightPixels);
+	printf("draw polygon rows done\n");
 }
