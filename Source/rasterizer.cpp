@@ -45,7 +45,8 @@ struct Pixel {
 };
 
 struct Vertex {
-	vec3 position;
+	vec3 o;	//position in original coordinate system
+	vec3 c; //position in current coordinate system
 };
 
 vec3 lightPos(0,-0.5, -0.7);
@@ -66,7 +67,7 @@ void Interpolate(Pixel a, Pixel b, vector<Pixel>& result);
 void ComputePolygonRows(const vector<Pixel>& vertexPixels, vector<Pixel>& leftPixels, vector<Pixel>& rightPixels);
 void DrawPolygonRows(const vector<Pixel>& leftPixels, const vector<Pixel>& rightPixels);
 void VertexShader(const Vertex& v, Pixel& p);
-void DrawPolygon(const vector<Vertex>& vertices);
+void DrawPolygon(vector<Vertex>& vertices);
 
 void PixelShader(const Pixel& p);
 
@@ -173,9 +174,9 @@ void Draw()
 		//Create a list of the triangles vertices
 		vector<Vertex> vertices(3);
 		//initalise the vertexes
-		vertices[0].position = triangles[i].v0;
-		vertices[1].position = triangles[i].v1;
-		vertices[2].position = triangles[i].v2;
+		vertices[0].o = triangles[i].v0;
+		vertices[1].o = triangles[i].v1;
+		vertices[2].o = triangles[i].v2;
 		
 		currentNormal = triangles[i].normal;
 		currentReflectance = triangles[i].color;
@@ -344,22 +345,21 @@ vec3 unitVectorToLightSource(vec3 a) {
 	return normalize(v);
 }
 
-Vertex TransformVertex(const Vertex& v) {
-	Vertex tv = {(v.position - cameraPos) * cameraRot};
-	return tv;
+void TransformVertex(Vertex& v) {
+	v.c = (v.o - cameraPos) * cameraRot;
 }
 
 //Project the 3d point v to 2D
-void VertexShader(const Vertex& v, const Vertex& t, Pixel& p) {
+void VertexShader(const Vertex& v, Pixel& p) {
 
 	//project the x and y values
-	p.x = (int) (focalLength * (t.position.x / t.position.z) + ((float) SCREEN_WIDTH / 2.0f));
-	p.y = (int) (focalLength * (t.position.y / t.position.z) + ((float) SCREEN_HEIGHT / 2.0f));
+	p.x = (int) (focalLength * (v.c.x / v.c.z) + ((float) SCREEN_WIDTH / 2.0f));
+	p.y = (int) (focalLength * (v.c.y / v.c.z) + ((float) SCREEN_HEIGHT / 2.0f));
 
 	//calculate the inverse of the depth of the point
-	p.zinv = 1.0f/(float)t.position.z;
+	p.zinv = 1.0f/(float)v.c.z;
 
-	p.pos3d = v.position * p.zinv;
+	p.pos3d = v.o * p.zinv;
 }
 
 void PixelShader(const Pixel& p) {
@@ -395,20 +395,18 @@ void PixelShader(const Pixel& p) {
 }
 
 //Draw a polygon given its vertices, taking into account depth
-void DrawPolygon(const vector<Vertex>& vertices)
+void DrawPolygon(vector<Vertex>& vertices)
 {
-	int V = vertices.size();
 
-	vector<Vertex> transformedVertices(V);
-	for(int i = 0; i < V; i++) {
-		transformedVertices[i] = TransformVertex(vertices[i]);
+	//Transform world
+	for(unsigned int i = 0; i < vertices.size(); i++) {
+		TransformVertex(vertices[i]);
 	}
 
-
 	//Calculate the projection of the polygons vertexes
-	vector<Pixel> vertexPixels(V);
-	for(int i = 0; i < V; i++) {
-		VertexShader(vertices[i], transformedVertices[i], vertexPixels[i]);
+	vector<Pixel> vertexPixels(vertices.size());
+	for(unsigned int i = 0; i < vertices.size(); i++) {
+		VertexShader(vertices[i], vertexPixels[i]);
 	}
 	
 	//lists to store the left most and right post pixel x values for each y value
