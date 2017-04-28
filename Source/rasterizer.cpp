@@ -415,7 +415,8 @@ Vertex ComputeIntersection(const Vertex a, const Vertex b, float e) {
 
 	Vertex output;
 	output.c = vec3(x, y, z);
-	output.w = a.w;
+	output.o = a.o + (b.o - a.o) * (e - a.c.x) / divide;
+	output.w = a.w + (b.w - a.w) * (e - a.c.x) / divide;
 		
 	return output;
 }
@@ -426,45 +427,26 @@ void ClipSpace(vector<Vertex>& vertices) {
 	}
 }
 
-void ClipEdge(vector<Vertex>& inputList, vector<Vertex>& outputList, int edge) {
+void ClipEdge(vector<Vertex>& inputList, vector<Vertex>& outputList) {
 
 	for(unsigned int i = 0; i < inputList.size(); i++) {
 		Vertex start = inputList[i];
 		Vertex end = inputList[(i+1) % inputList.size()];
 
 		float startxmax = start.w * (float) SCREEN_WIDTH / 2.0f;
-		float startxmin = -startxmax;
 		float endxmax = end.w * (float) SCREEN_WIDTH / 2.0f;
-		float endxmin = -endxmax;
 
-		if(edge == 1) {
-			if(end.c.x < endxmax) {
-				if(start.c.x > startxmax) {
-					if(Intersection(start,end)) {
-						outputList.push_back(ComputeIntersection(start, end, startxmax));
-					}
-				}
-				outputList.push_back(end);
-			}
-			else if(start.c.x < startxmax) {
-				if(Intersection(start, end)) {
-					outputList.push_back(ComputeIntersection(end, start, endxmax));
+		if(end.c.x < endxmax) {
+			if(start.c.x > startxmax) {
+				if(Intersection(start,end)) {
+					outputList.push_back(ComputeIntersection(start, end, startxmax));
 				}
 			}
+			outputList.push_back(end);
 		}
-		else if(edge == 2) {
-			if(end.c.x > endxmin) {
-				if(start.c.x < startxmin) {
-					if(Intersection(start,end)) {
-						outputList.push_back(ComputeIntersection(start, end, startxmin));
-					}
-				}
-				outputList.push_back(end);
-			}
-			else if(start.c.x > startxmin) {
-				if(Intersection(start, end)) {
-					outputList.push_back(ComputeIntersection(end, start, endxmin));
-				}
+		else if(start.c.x < startxmax) {
+			if(Intersection(start, end)) {
+				outputList.push_back(ComputeIntersection(end, start, endxmax));
 			}
 		}
 	}
@@ -483,18 +465,7 @@ bool Clip(vector<Vertex>& vertices) {
 
 	//Vertex start = inputList.back();
 
-	ClipEdge(inputList, outputList, 1);
-
-	inputList = outputList;
-	outputList.clear();
-
-	ClipEdge(inputList, outputList, 2);
-
-	/*for(unsigned int i = 0; i < vertices.size(); i++) {
-		vertices[i].c.x = vertices[i].c.x * focalLength / vertices[i].c.z;
-		vertices[i].c.y = vertices[i].c.y * focalLength / vertices[i].c.z;
-		vertices[i].c.z = vertices[i].c.z * focalLength / vertices[i].c.z;
-	}*/
+	ClipEdge(inputList, outputList);
 
 	vertices = outputList;
 
@@ -510,18 +481,18 @@ void DrawPolygon(vector<Vertex>& vertices)
 		TransformVertex(vertices[i]);
 	}
 
-	/*printf("old:\n");
+	printf("old:\n");
 	for(unsigned int i = 0; i < vertices.size(); i++) {
 		printf("(%f,%f,%f)\n", vertices[i].c.x, vertices[i].c.y, vertices[i].c.z);
-	}*/
+	}
 
 	//Clip polygon
-	//Clip(vertices);
+	Clip(vertices);
 
-	/*printf("new:\n");
+	printf("new:\n");
 	for(unsigned int i = 0; i < vertices.size(); i++) {
 		printf("(%f,%f,%f)\n", vertices[i].c.x, vertices[i].c.y, vertices[i].c.z);
-	}*/
+	}
 
 	//Calculate the projection of the polygons vertexes
 	vector<Pixel> vertexPixels(vertices.size());
