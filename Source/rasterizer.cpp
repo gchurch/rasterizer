@@ -20,7 +20,7 @@ SDL_Surface* screen;
 int t;
 
 //Camera information
-vec3 cameraPos(0, 0, -3.001);
+vec3 cameraPos(0, 0, -4.001);
 mat3 cameraRot(vec3(1,0,0), vec3(0,1,0), vec3(0,0,1));
 float yaw = 0;
 float focalLength = 500;
@@ -409,15 +409,18 @@ bool Intersection(const Vertex a, const Vertex b) {
 
 Vertex ComputeIntersection(const Vertex a, const Vertex b, float e) {
 	float divide = b.c.x - a.c.x;
-	float y = a.c.y + (b.c.y - a.c.y) * (e - a.c.x) / divide;
+	//float y = a.c.y + (b.c.y - a.c.y) * (e - a.c.x) / divide;
 	float z = a.c.z + (b.c.z - a.c.z) * (e - a.c.x) / divide;
+	float y = a.c.y;
+	//float z = b.c.z;
 	float x = e;
+	float w = a.w;
 
 	Vertex output;
 	output.c = vec3(x, y, z);
+	output.w = w;
 	output.o = a.o + (b.o - a.o) * (e - a.c.x) / divide;
-	output.w = a.w + (b.w - a.w) * (e - a.c.x) / divide;
-		
+
 	return output;
 }
 
@@ -429,26 +432,34 @@ void ClipSpace(vector<Vertex>& vertices) {
 
 void ClipEdge(vector<Vertex>& inputList, vector<Vertex>& outputList) {
 
+    Vertex start = inputList[inputList.size() - 1];
 	for(unsigned int i = 0; i < inputList.size(); i++) {
-		Vertex start = inputList[i];
-		Vertex end = inputList[(i+1) % inputList.size()];
+		Vertex end = inputList[i];
 
 		float startxmax = start.w * (float) SCREEN_WIDTH / 2.0f;
 		float endxmax = end.w * (float) SCREEN_WIDTH / 2.0f;
 
 		if(end.c.x < endxmax) {
 			if(start.c.x > startxmax) {
-				if(Intersection(start,end)) {
-					outputList.push_back(ComputeIntersection(start, end, startxmax));
-				}
+				float a = (start.c.x - start.w * ((float) SCREEN_WIDTH / 2)) / (-start.w * ((float) SCREEN_WIDTH / 2) + end.w * ((float) SCREEN_WIDTH) + start.c.x - end.c.x);
+				vec3 Pc = (1.0f - a) * start.c + a * end.c;
+				Vertex P;
+				P.c = Pc;
+				P.o = (1.0f - a) * start.o + a * end.o;
+				outputList.push_back(P);
 			}
 			outputList.push_back(end);
 		}
 		else if(start.c.x < startxmax) {
-			if(Intersection(start, end)) {
-				outputList.push_back(ComputeIntersection(end, start, endxmax));
-			}
+			//outputList.push_back(ComputeIntersection(start, end, endxmax));
+			float a = (start.c.x - start.w * ((float) SCREEN_WIDTH / 2)) / (-start.w * ((float) SCREEN_WIDTH / 2) + end.w * ((float) SCREEN_WIDTH) + start.c.x - end.c.x);
+			vec3 Pc = (1.0f - a) * start.c + a * end.c;
+			Vertex P;
+			P.c = Pc;
+			P.o = (1.0f - a) * start.o + a * end.o;
+			outputList.push_back(P);
 		}
+		start = end;
 	}
 }
 
