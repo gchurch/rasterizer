@@ -545,6 +545,46 @@ void ClipTopEdge(vector<Vertex>& inputList, vector<Vertex>& outputList) {
 	}
 }
 
+Vertex ClipBottom(Vertex start, Vertex end) {
+	float factor = (((float) SCREEN_HEIGHT) / 2.0f) - clipBoundary;
+
+	float a = (start.c.y - start.w * factor) / (-start.w * factor + end.w * factor + start.c.y - end.c.y);
+	Vertex P;
+	P.c = (1.0f - a) * start.c + a * end.c;
+	P.o = (1.0f - a) * start.o + a * end.o;
+
+	float w = (1.0f - a) * start.w + a * end.w;
+	float ratio = w / (P.c.z / focalLength);
+	P.c = P.c / ratio;
+
+	return P;
+}
+
+void ClipBottomEdge(vector<Vertex>& inputList, vector<Vertex>& outputList) {
+
+    Vertex start = inputList[inputList.size() - 1];
+	for(unsigned int i = 0; i < inputList.size(); i++) {
+		Vertex end = inputList[i];
+
+		float startymax = start.w * ((float) SCREEN_HEIGHT / 2.0f - clipBoundary);
+		float endymax = end.w * ((float) SCREEN_HEIGHT / 2.0f - clipBoundary);
+
+		if(end.c.y < endymax) {
+			if(start.c.y > startymax) {
+				Vertex P = ClipBottom(start, end);
+				outputList.push_back(P);
+			}
+			outputList.push_back(end);
+		}
+		else if(start.c.y < startymax) {
+			Vertex P = ClipBottom(start, end);
+			outputList.push_back(P);
+		}
+		start = end;
+	}
+}
+
+
 bool Clip(vector<Vertex>& vertices) {
 
 	ClipSpace(vertices);
@@ -568,6 +608,11 @@ bool Clip(vector<Vertex>& vertices) {
 	outputList.clear();
 
 	ClipTopEdge(inputList, outputList);
+
+	inputList = outputList;
+	outputList.clear();
+
+	ClipBottomEdge(inputList, outputList);
 
 	vertices = outputList;
 
