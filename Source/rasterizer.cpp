@@ -407,66 +407,84 @@ bool Intersection(const Vertex a, const Vertex b) {
 	}
 }
 
-Vertex ComputeIntersection(const Vertex a, const Vertex b, float e) {
-	float divide = b.c.x - a.c.x;
-	//float y = a.c.y + (b.c.y - a.c.y) * (e - a.c.x) / divide;
-	float z = a.c.z + (b.c.z - a.c.z) * (e - a.c.x) / divide;
-	float y = a.c.y;
-	//float z = b.c.z;
-	float x = e;
-	float w = a.w;
-
-	Vertex output;
-	output.c = vec3(x, y, z);
-	output.w = w;
-	output.o = a.o + (b.o - a.o) * (e - a.c.x) / divide;
-
-	return output;
-}
-
 void ClipSpace(vector<Vertex>& vertices) {
 	for(unsigned int i = 0; i < vertices.size(); i++) {
 		vertices[i].w = vertices[i].c.z / focalLength;
 	}
 }
 
-void ClipEdge(vector<Vertex>& inputList, vector<Vertex>& outputList) {
+Vertex ClipRight(Vertex start, Vertex end) {
+	float factor = (((float) SCREEN_WIDTH) / 2.0f) - 20;
+
+	float a = (start.c.x - start.w * factor) / (-start.w * factor + end.w * factor + start.c.x - end.c.x);
+	Vertex P;
+	P.c = (1.0f - a) * start.c + a * end.c;
+	P.o = (1.0f - a) * start.o + a * end.o;
+
+	float w = (1.0f - a) * start.w + a * end.w;
+	float ratio = w / (P.c.z / focalLength);
+	P.c = P.c / ratio;
+
+	return P;
+}
+
+void ClipRightEdge(vector<Vertex>& inputList, vector<Vertex>& outputList) {
 
     Vertex start = inputList[inputList.size() - 1];
 	for(unsigned int i = 0; i < inputList.size(); i++) {
 		Vertex end = inputList[i];
 
-		float startxmax = start.w * (float) SCREEN_WIDTH / 2.0f;
-		float endxmax = end.w * (float) SCREEN_WIDTH / 2.0f;
-
-		float factor = (((float) SCREEN_WIDTH) / 2.0f) - 20;
+		float startxmax = start.w * ((float) SCREEN_WIDTH / 2.0f - 20);
+		float endxmax = end.w * ((float) SCREEN_WIDTH / 2.0f - 20);
 
 		if(end.c.x < endxmax) {
 			if(start.c.x > startxmax) {
-				float a = (start.c.x - start.w * factor) / (-start.w * factor + end.w * factor + start.c.x - end.c.x);
-				Vertex P;
-				P.c = (1.0f - a) * start.c + a * end.c;
-				P.o = (1.0f - a) * start.o + a * end.o;
-
-				float w = (1.0f - a) * start.w + a * end.w;
-				float ratio = w / (P.c.z / focalLength);
-				P.c = P.c / ratio;
-
+				Vertex P = ClipRight(start, end);
 				outputList.push_back(P);
 			}
 			outputList.push_back(end);
 		}
 		else if(start.c.x < startxmax) {
-			//outputList.push_back(ComputeIntersection(start, end, endxmax));
-			float a = (start.c.x - start.w * factor) / (-start.w * factor + end.w * factor + start.c.x - end.c.x);
-			Vertex P;
-			P.c = (1.0f - a) * start.c + a * end.c;
-			P.o = (1.0f - a) * start.o + a * end.o;
+			Vertex P = ClipRight(start, end);
+			outputList.push_back(P);
+		}
+		start = end;
+	}
+}
 
-			float w = (1.0f - a) * start.w + a * end.w;
-			float ratio = w / (P.c.z / focalLength);
-			P.c = P.c / ratio;
+Vertex ClipLeft(Vertex start, Vertex end) {
+	float factor = (((float) SCREEN_WIDTH) / 2.0f) - 20;
 
+	float a = (start.w * factor + start.c.x) / ((start.w * factor + start.c.x) - (end.w * factor + end.c.x));
+	Vertex P;
+	P.c = (1.0f - a) * start.c + a * end.c;
+	P.o = (1.0f - a) * start.o + a * end.o;
+
+	float w = (1.0f - a) * start.w + a * end.w;
+	float ratio = w / (P.c.z / focalLength);
+	P.c = P.c / ratio;
+
+	return P;
+}
+
+void ClipLeftEdge(vector<Vertex>& inputList, vector<Vertex>& outputList) {
+
+    Vertex start = inputList[inputList.size() - 1];
+	for(unsigned int i = 0; i < inputList.size(); i++) {
+		Vertex end = inputList[i];
+
+		float startxmin = -start.w * ((float) SCREEN_WIDTH / 2.0f - 20);
+		float endxmin = -end.w * ((float) SCREEN_WIDTH / 2.0f - 20);
+
+		if(end.c.x > endxmin) {
+			if(start.c.x < startxmin) {
+				Vertex P = ClipLeft(start, end);
+				outputList.push_back(P);
+			}
+			outputList.push_back(end);
+		}
+		else if(start.c.x > startxmin) {
+			Vertex P = ClipLeft(start, end);
 			outputList.push_back(P);
 		}
 		start = end;
@@ -484,9 +502,12 @@ bool Clip(vector<Vertex>& vertices) {
 	vector<Vertex> inputList = outputList;
 	outputList.clear();
 
-	//Vertex start = inputList.back();
+	ClipRightEdge(inputList, outputList);
 
-	ClipEdge(inputList, outputList);
+	inputList = outputList;
+	outputList.clear();
+
+	ClipLeftEdge(inputList, outputList);	
 
 	vertices = outputList;
 
@@ -502,18 +523,18 @@ void DrawPolygon(vector<Vertex>& vertices)
 		TransformVertex(vertices[i]);
 	}
 
-	printf("old:\n");
+	/*printf("old:\n");
 	for(unsigned int i = 0; i < vertices.size(); i++) {
 		printf("(%f,%f,%f)\n", vertices[i].c.x, vertices[i].c.y, vertices[i].c.z);
-	}
+	}*/
 
 	//Clip polygon
 	Clip(vertices);
 
-	printf("new:\n");
+	/*printf("new:\n");
 	for(unsigned int i = 0; i < vertices.size(); i++) {
 		printf("(%f,%f,%f)\n", vertices[i].c.x, vertices[i].c.y, vertices[i].c.z);
-	}
+	}*/
 
 	//Calculate the projection of the polygons vertexes
 	vector<Pixel> vertexPixels(vertices.size());
