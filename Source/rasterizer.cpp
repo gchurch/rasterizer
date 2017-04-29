@@ -29,6 +29,7 @@ float posDelta = 0.01;
 float rotDelta = 0.01;
 
 float clipBoundary = 20;
+float maxDepth = 6.0f;
 
 //Scene information
 vector<Triangle> triangles;
@@ -604,7 +605,7 @@ bool Clip(vector<Vertex>& vertices) {
 
 	ClipLeftEdge(inputList, outputList);	
 
-	inputList = outputList;
+	/*inputList = outputList;
 	outputList.clear();
 
 	ClipTopEdge(inputList, outputList);
@@ -612,11 +613,33 @@ bool Clip(vector<Vertex>& vertices) {
 	inputList = outputList;
 	outputList.clear();
 
-	ClipBottomEdge(inputList, outputList);
+	ClipBottomEdge(inputList, outputList);*/
 
 	vertices = outputList;
 
-	return true;
+	return (vertices.size() > 0);
+}
+
+bool IsPolygonInfrontOfCamera(const vector<Vertex>& vertices) {
+	bool visible = false;
+	for(unsigned int i = 0; i < vertices.size(); i++) {
+		if(vertices[i].c.z > 0) {
+			visible = true;
+		}
+	}
+	return visible;
+}
+
+bool IsPolygonWithinMaxDepth(const vector<Pixel>& vertexPixels) {
+	float invMaxDepth = 1.0f / maxDepth;
+
+	bool visible = false;
+	for(unsigned int i = 0; i < vertexPixels.size(); i++) {
+		if(vertexPixels[i].zinv > invMaxDepth) {
+			visible = true;
+		}
+	}
+	return visible;
 }
 
 //Draw a polygon given its vertices, taking into account depth
@@ -628,34 +651,42 @@ void DrawPolygon(vector<Vertex>& vertices)
 		TransformVertex(vertices[i]);
 	}
 
-	/*printf("old:\n");
-	for(unsigned int i = 0; i < vertices.size(); i++) {
-		printf("(%f,%f,%f)\n", vertices[i].c.x, vertices[i].c.y, vertices[i].c.z);
-	}*/
+	//Backface culling
+	if(IsPolygonInfrontOfCamera(vertices)) {
 
-	//Clip polygon
-	Clip(vertices);
+		/*printf("old:\n");
+		for(unsigned int i = 0; i < vertices.size(); i++) {
+			printf("(%f,%f,%f)\n", vertices[i].c.x, vertices[i].c.y, vertices[i].c.z);
+		}*/
 
-	/*printf("new:\n");
-	for(unsigned int i = 0; i < vertices.size(); i++) {
-		printf("(%f,%f,%f)\n", vertices[i].c.x, vertices[i].c.y, vertices[i].c.z);
-	}*/
+		//Clip polygon - function returns false if new polygon has zero vertices
+		if(Clip(vertices)) {
 
-	//Calculate the projection of the polygons vertexes
-	vector<Pixel> vertexPixels(vertices.size());
-	for(unsigned int i = 0; i < vertices.size(); i++) {
-		VertexShader(vertices[i], vertexPixels[i]);
+			/*printf("new:\n");
+			for(unsigned int i = 0; i < vertices.size(); i++) {
+				printf("(%f,%f,%f)\n", vertices[i].c.x, vertices[i].c.y, vertices[i].c.z);
+			}*/
+
+			//Calculate the projection of the polygons vertexes
+			vector<Pixel> vertexPixels(vertices.size());
+			for(unsigned int i = 0; i < vertices.size(); i++) {
+				VertexShader(vertices[i], vertexPixels[i]);
+			}
+
+			if(IsPolygonWithinMaxDepth(vertexPixels)) {
+		
+				//lists to store the left most and right post pixel x values for each y value
+				vector<Pixel> leftPixels;
+				vector<Pixel> rightPixels;
+
+				//Compute the leftPixels and rightPixels lists from the vertexes
+				ComputePolygonRows(vertexPixels, leftPixels, rightPixels);
+				//printf("compute polygon rows done\n");
+
+				//Draw the polygon
+				DrawPolygonRows(leftPixels, rightPixels);
+				//printf("draw polygon rows done\n");
+			}
+		}
 	}
-	
-	//lists to store the left most and right post pixel x values for each y value
-	vector<Pixel> leftPixels;
-	vector<Pixel> rightPixels;
-
-	//Compute the leftPixels and rightPixels lists from the vertexes
-	ComputePolygonRows(vertexPixels, leftPixels, rightPixels);
-	//printf("compute polygon rows done\n");
-
-	//Draw the polygon
-	DrawPolygonRows(leftPixels, rightPixels);
-	//printf("draw polygon rows done\n");
 }
