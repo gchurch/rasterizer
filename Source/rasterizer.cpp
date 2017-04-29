@@ -27,6 +27,8 @@ float focalLength = 500;
 float posDelta = 0.01;
 float rotDelta = 0.01;
 
+float clipBoundary = 20;
+
 //Scene information
 vector<Triangle> triangles;
 
@@ -414,7 +416,7 @@ void ClipSpace(vector<Vertex>& vertices) {
 }
 
 Vertex ClipRight(Vertex start, Vertex end) {
-	float factor = (((float) SCREEN_WIDTH) / 2.0f) - 20;
+	float factor = (((float) SCREEN_WIDTH) / 2.0f) - clipBoundary;
 
 	float a = (start.c.x - start.w * factor) / (-start.w * factor + end.w * factor + start.c.x - end.c.x);
 	Vertex P;
@@ -434,8 +436,8 @@ void ClipRightEdge(vector<Vertex>& inputList, vector<Vertex>& outputList) {
 	for(unsigned int i = 0; i < inputList.size(); i++) {
 		Vertex end = inputList[i];
 
-		float startxmax = start.w * ((float) SCREEN_WIDTH / 2.0f - 20);
-		float endxmax = end.w * ((float) SCREEN_WIDTH / 2.0f - 20);
+		float startxmax = start.w * ((float) SCREEN_WIDTH / 2.0f - clipBoundary);
+		float endxmax = end.w * ((float) SCREEN_WIDTH / 2.0f - clipBoundary);
 
 		if(end.c.x < endxmax) {
 			if(start.c.x > startxmax) {
@@ -453,7 +455,7 @@ void ClipRightEdge(vector<Vertex>& inputList, vector<Vertex>& outputList) {
 }
 
 Vertex ClipLeft(Vertex start, Vertex end) {
-	float factor = (((float) SCREEN_WIDTH) / 2.0f) - 20;
+	float factor = (((float) SCREEN_WIDTH) / 2.0f) - clipBoundary;
 
 	float a = (start.w * factor + start.c.x) / ((start.w * factor + start.c.x) - (end.w * factor + end.c.x));
 	Vertex P;
@@ -473,8 +475,8 @@ void ClipLeftEdge(vector<Vertex>& inputList, vector<Vertex>& outputList) {
 	for(unsigned int i = 0; i < inputList.size(); i++) {
 		Vertex end = inputList[i];
 
-		float startxmin = -start.w * ((float) SCREEN_WIDTH / 2.0f - 20);
-		float endxmin = -end.w * ((float) SCREEN_WIDTH / 2.0f - 20);
+		float startxmin = -start.w * ((float) SCREEN_WIDTH / 2.0f - clipBoundary);
+		float endxmin = -end.w * ((float) SCREEN_WIDTH / 2.0f - clipBoundary);
 
 		if(end.c.x > endxmin) {
 			if(start.c.x < startxmin) {
