@@ -416,7 +416,7 @@ void ClipSpace(vector<Vertex>& vertices) {
 }
 
 Vertex ClipRight(Vertex start, Vertex end) {
-	float factor = (((float) SCREEN_WIDTH) / 2.0f) - clipBoundary;
+	float factor = (((float) SCREEN_WIDTH) / 2.0f) - clipBoundary + epsilon;
 
 	float a = (start.c.x - start.w * factor) / (-start.w * factor + end.w * factor + start.c.x - end.c.x);
 	Vertex P;
@@ -455,7 +455,7 @@ void ClipRightEdge(vector<Vertex>& inputList, vector<Vertex>& outputList) {
 }
 
 Vertex ClipLeft(Vertex start, Vertex end) {
-	float factor = (((float) SCREEN_WIDTH) / 2.0f) - clipBoundary;
+	float factor = (((float) SCREEN_WIDTH) / 2.0f) - clipBoundary - epsilon;
 
 	float a = (start.w * factor + start.c.x) / ((start.w * factor + start.c.x) - (end.w * factor + end.c.x));
 	Vertex P;
