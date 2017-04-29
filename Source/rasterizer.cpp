@@ -20,7 +20,7 @@ SDL_Surface* screen;
 int t;
 
 //Camera information
-vec3 cameraPos(0, 0, -4.001);
+vec3 cameraPos(0, 0, -3.001);
 mat3 cameraRot(vec3(1,0,0), vec3(0,1,0), vec3(0,0,1));
 float yaw = 0;
 float pitch = 0;
@@ -28,7 +28,7 @@ float focalLength = 500;
 float posDelta = 0.01;
 float rotDelta = 0.01;
 
-float clipBoundary = 20;
+float clipBoundary = 0;
 float maxDepth = 6.0f;
 
 //Scene information
@@ -72,7 +72,7 @@ void Interpolate(Pixel a, Pixel b, vector<Pixel>& result);
 void ComputePolygonRows(const vector<Pixel>& vertexPixels, vector<Pixel>& leftPixels, vector<Pixel>& rightPixels);
 void DrawPolygonRows(const vector<Pixel>& leftPixels, const vector<Pixel>& rightPixels);
 void VertexShader(const Vertex& v, Pixel& p);
-void DrawPolygon(vector<Vertex>& vertices);
+void DrawPolygon(vector<Vertex> vertices);
 
 void PixelShader(const Pixel& p);
 
@@ -453,14 +453,14 @@ void ClipRightEdge(vector<Vertex>& inputList, vector<Vertex>& outputList) {
 		float startxmax = start.w * ((float) SCREEN_WIDTH / 2.0f - clipBoundary);
 		float endxmax = end.w * ((float) SCREEN_WIDTH / 2.0f - clipBoundary);
 
-		if(end.c.x < endxmax) {
-			if(start.c.x > startxmax) {
+		if(end.c.x < endxmax - epsilon) {
+			if(start.c.x > startxmax + epsilon) {
 				Vertex P = ClipRight(start, end);
 				outputList.push_back(P);
 			}
 			outputList.push_back(end);
 		}
-		else if(start.c.x < startxmax) {
+		else if(start.c.x < startxmax - epsilon) {
 			Vertex P = ClipRight(start, end);
 			outputList.push_back(P);
 		}
@@ -492,14 +492,14 @@ void ClipLeftEdge(vector<Vertex>& inputList, vector<Vertex>& outputList) {
 		float startxmin = -start.w * ((float) SCREEN_WIDTH / 2.0f - clipBoundary);
 		float endxmin = -end.w * ((float) SCREEN_WIDTH / 2.0f - clipBoundary);
 
-		if(end.c.x > endxmin) {
-			if(start.c.x < startxmin) {
+		if(end.c.x > endxmin + epsilon) {
+			if(start.c.x < startxmin - epsilon) {
 				Vertex P = ClipLeft(start, end);
 				outputList.push_back(P);
 			}
 			outputList.push_back(end);
 		}
-		else if(start.c.x > startxmin) {
+		else if(start.c.x > startxmin + epsilon) {
 			Vertex P = ClipLeft(start, end);
 			outputList.push_back(P);
 		}
@@ -588,7 +588,7 @@ void ClipBottomEdge(vector<Vertex>& inputList, vector<Vertex>& outputList) {
 
 bool Clip(vector<Vertex>& vertices) {
 
-	ClipSpace(vertices);
+	/*ClipSpace(vertices);
 
 	int V = vertices.size();
 
@@ -598,14 +598,14 @@ bool Clip(vector<Vertex>& vertices) {
 	inputList = outputList;
 	outputList.clear();
 
-	ClipRightEdge(inputList, outputList);
+	ClipLeftEdge(inputList, outputList);	
 
 	inputList = outputList;
 	outputList.clear();
 
-	ClipLeftEdge(inputList, outputList);	
+	ClipRightEdge(inputList, outputList);
 
-	/*inputList = outputList;
+	inputList = outputList;
 	outputList.clear();
 
 	ClipTopEdge(inputList, outputList);
@@ -613,9 +613,9 @@ bool Clip(vector<Vertex>& vertices) {
 	inputList = outputList;
 	outputList.clear();
 
-	ClipBottomEdge(inputList, outputList);*/
+	ClipBottomEdge(inputList, outputList);
 
-	vertices = outputList;
+	vertices = outputList;*/
 
 	return (vertices.size() > 0);
 }
@@ -643,7 +643,7 @@ bool IsPolygonWithinMaxDepth(const vector<Pixel>& vertexPixels) {
 }
 
 //Draw a polygon given its vertices, taking into account depth
-void DrawPolygon(vector<Vertex>& vertices)
+void DrawPolygon(vector<Vertex> vertices)
 {
 
 	//Transform world
@@ -654,18 +654,18 @@ void DrawPolygon(vector<Vertex>& vertices)
 	//Backface culling
 	if(IsPolygonInfrontOfCamera(vertices)) {
 
-		/*printf("old:\n");
+		printf("old:\n");
 		for(unsigned int i = 0; i < vertices.size(); i++) {
 			printf("(%f,%f,%f)\n", vertices[i].c.x, vertices[i].c.y, vertices[i].c.z);
-		}*/
+		}
 
 		//Clip polygon - function returns false if new polygon has zero vertices
 		if(Clip(vertices)) {
 
-			/*printf("new:\n");
+			printf("new:\n");
 			for(unsigned int i = 0; i < vertices.size(); i++) {
 				printf("(%f,%f,%f)\n", vertices[i].c.x, vertices[i].c.y, vertices[i].c.z);
-			}*/
+			}
 
 			//Calculate the projection of the polygons vertexes
 			vector<Pixel> vertexPixels(vertices.size());
