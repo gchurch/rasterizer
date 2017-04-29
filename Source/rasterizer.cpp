@@ -439,24 +439,34 @@ void ClipEdge(vector<Vertex>& inputList, vector<Vertex>& outputList) {
 		float startxmax = start.w * (float) SCREEN_WIDTH / 2.0f;
 		float endxmax = end.w * (float) SCREEN_WIDTH / 2.0f;
 
+		float factor = (((float) SCREEN_WIDTH) / 2.0f) - 20;
+
 		if(end.c.x < endxmax) {
 			if(start.c.x > startxmax) {
-				float a = (start.c.x - start.w * ((float) SCREEN_WIDTH / 2)) / (-start.w * ((float) SCREEN_WIDTH / 2) + end.w * ((float) SCREEN_WIDTH) + start.c.x - end.c.x);
-				vec3 Pc = (1.0f - a) * start.c + a * end.c;
+				float a = (start.c.x - start.w * factor) / (-start.w * factor + end.w * factor + start.c.x - end.c.x);
 				Vertex P;
-				P.c = Pc;
+				P.c = (1.0f - a) * start.c + a * end.c;
 				P.o = (1.0f - a) * start.o + a * end.o;
+
+				float w = (1.0f - a) * start.w + a * end.w;
+				float ratio = w / (P.c.z / focalLength);
+				P.c = P.c / ratio;
+
 				outputList.push_back(P);
 			}
 			outputList.push_back(end);
 		}
 		else if(start.c.x < startxmax) {
 			//outputList.push_back(ComputeIntersection(start, end, endxmax));
-			float a = (start.c.x - start.w * ((float) SCREEN_WIDTH / 2)) / (-start.w * ((float) SCREEN_WIDTH / 2) + end.w * ((float) SCREEN_WIDTH) + start.c.x - end.c.x);
-			vec3 Pc = (1.0f - a) * start.c + a * end.c;
+			float a = (start.c.x - start.w * factor) / (-start.w * factor + end.w * factor + start.c.x - end.c.x);
 			Vertex P;
-			P.c = Pc;
+			P.c = (1.0f - a) * start.c + a * end.c;
 			P.o = (1.0f - a) * start.o + a * end.o;
+
+			float w = (1.0f - a) * start.w + a * end.w;
+			float ratio = w / (P.c.z / focalLength);
+			P.c = P.c / ratio;
+
 			outputList.push_back(P);
 		}
 		start = end;
