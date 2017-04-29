@@ -23,6 +23,7 @@ int t;
 vec3 cameraPos(0, 0, -4.001);
 mat3 cameraRot(vec3(1,0,0), vec3(0,1,0), vec3(0,0,1));
 float yaw = 0;
+float pitch = 0;
 float focalLength = 500;
 float posDelta = 0.01;
 float rotDelta = 0.01;
@@ -128,6 +129,16 @@ void Update()
 		yaw += rotDelta;
 		updateRotationMatrix();
 	}
+	if(keystate[SDLK_m])
+	{
+		pitch += rotDelta;
+		updateRotationMatrix();
+	}
+	if(keystate[SDLK_n])
+	{
+		pitch -= rotDelta;
+		updateRotationMatrix();
+	}
 
 	//Move light position depending on key press
 	if(keystate[SDLK_w])
@@ -198,9 +209,11 @@ void Draw()
 
 //Update the cameras coordinate system
 void updateRotationMatrix() {
+	mat3 yRot(vec3(cos(yaw),0,-sin(yaw)), vec3(0,1,0), vec3(sin(yaw),0,cos(yaw)));
+	mat3 xRot(vec3(1,0,0), vec3(0, cos(pitch), sin(pitch)), vec3(0, -sin(pitch), cos(pitch)));
+
 	//Calcuate new columns for the camera's rotation matrix
-	cameraRot[0] = vec3(cos(yaw), 0, -sin(yaw));
-	cameraRot[2] = vec3(sin(yaw), 0, cos(yaw));
+	cameraRot = yRot * xRot;
 }
 
 //Interpolate the points on a line between vectors a and b and put the points into result
@@ -416,7 +429,7 @@ void ClipSpace(vector<Vertex>& vertices) {
 }
 
 Vertex ClipRight(Vertex start, Vertex end) {
-	float factor = (((float) SCREEN_WIDTH) / 2.0f) - clipBoundary + epsilon;
+	float factor = (((float) SCREEN_WIDTH) / 2.0f) - clipBoundary;
 
 	float a = (start.c.x - start.w * factor) / (-start.w * factor + end.w * factor + start.c.x - end.c.x);
 	Vertex P;
@@ -455,7 +468,7 @@ void ClipRightEdge(vector<Vertex>& inputList, vector<Vertex>& outputList) {
 }
 
 Vertex ClipLeft(Vertex start, Vertex end) {
-	float factor = (((float) SCREEN_WIDTH) / 2.0f) - clipBoundary - epsilon;
+	float factor = (((float) SCREEN_WIDTH) / 2.0f) - clipBoundary;
 
 	float a = (start.w * factor + start.c.x) / ((start.w * factor + start.c.x) - (end.w * factor + end.c.x));
 	Vertex P;
