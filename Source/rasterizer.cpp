@@ -250,6 +250,156 @@ void Interpolate(Pixel a, Pixel b, vector<Pixel>& result) {
 	}
 }
 
+int calculateOctant(Pixel a, Pixel b) {
+	int dx = b.x - a.x;
+	int dy = a.y - b.y;
+	float gradient = (float) dy / (float) dx;
+	if(dx == 0) {
+		return 1;
+	}
+	else if(dy == 0) {
+		return 0;
+	}
+	else if(gradient == 1) {
+		return 0;
+	}
+	else if(gradient == 1) {
+		if(a.x < b.x) {
+			return 0;
+		}
+		else if(a.x > b.x) {
+			return 4;
+		}
+	}
+	else if(gradient == -1) {
+		if(a.x > b.x) {
+			return 3;
+		}
+		else if(a.x < b.x) {
+			return 7;
+		}
+	}
+	if(a.y < b.y) {
+		if(gradient > 1) {
+			return 1;
+		}
+		else if(gradient < -1) {
+			return 2;
+		}
+	}
+	else if(a.x > b.x) {
+		if(gradient <= 0 && gradient >= -1) {
+			return 3;
+		}
+		else if(gradient > 0 && gradient <= 1) {
+			return 4;
+		}
+	}
+	else if(a.y > b.y) {
+		if(gradient > 1) {
+			return 5;
+		}
+		else if(gradient < -1) {
+			return 6;
+		}
+	}
+	else if(a.x < b.x) {
+		if(gradient < 0 && gradient >= -1) {
+			return 7;
+		}
+		else if(gradient >= 0 && gradient <= 1) {
+			return 0;
+		}
+	}
+	return -1;
+}
+
+void switchToOctantZeroFrom(int octant, Pixel& p) {
+	int tmp = p.x;
+	switch(octant) {
+		case 0: 
+		case 1:
+			p.x = p.y;
+			p.y = tmp;
+		case 2:
+			p.x = p.y;
+			p.y = -tmp;
+		case 3:
+			p.x = -p.x;
+		case 4:
+			p.x = -p.x;
+			p.y = -p.y;
+		case 5:
+			p.x = -p.y;
+			p.y = -tmp;
+		case 6:
+			p.x = -p.y;
+			p.y = p.x;
+		case 7:
+			p.y = -p.y;
+	}
+}
+
+void switchFromOctantZeroTo(int octant, Pixel& p) {
+	int tmp = p.x;
+	switch(octant) {
+		case 0: 
+		case 1:
+			p.x = p.y;
+			p.y = tmp;
+		case 2:
+			p.x = -p.y;
+			p.y = p.x;
+		case 3:
+			p.x = -p.x;
+		case 4:
+			p.x = -p.x;
+			p.y = -p.y;
+		case 5:
+			p.x = -p.y;
+			p.y = -tmp;
+		case 6:
+			p.x = p.y;
+			p.y = -tmp;
+		case 7:
+			p.y = -p.y;
+	}
+}
+
+//Interpolate the points on a line between vectors a and b and put the points into result
+void Interpolate1(Pixel a, Pixel b, vector<Pixel>& result) {
+
+	int octant = calculateOctant(a, b);
+	printf("octant: %d\n", octant);
+	switchToOctantZeroFrom(octant, a);
+	switchToOctantZeroFrom(octant, b);
+
+	int N = result.size();
+
+	//Calculate the steps needed in the x and y direction, and also the step needed for the zinv
+	int dx = b.x - a.x;
+	int dy = b.y - a.y;
+	int D = 2 * dy - dx;
+	int y = a.y;
+
+	for(int i = 0; i < N; i++) {
+		int x = i + a.x;
+		result[i].x = x;
+		result[i].y = y;
+		result[i].zinv = a.zinv;
+		result[i].pos3d = a.pos3d;
+		if(D > 0) {
+			y = y + 1;
+			D = D - 2 * dy;
+		}
+		D = D + 2 * dy;
+	}
+
+	for(unsigned int i = 0; i < result.size(); i++) {
+		switchFromOctantZeroTo(octant, result[i]);
+	}
+}
+
 //Calculate the leftPixels and rightPixels lists from the vertex coordinats of the polygon
 void ComputePolygonRows(const vector<Pixel>& vertexPixels, vector<Pixel>& leftPixels, vector<Pixel>& rightPixels) {
 		
@@ -590,8 +740,6 @@ bool Clip(vector<Vertex>& vertices) {
 
 	/*ClipSpace(vertices);
 
-	int V = vertices.size();
-
 	vector<Vertex> outputList = vertices;
 	vector<Vertex> inputList;
 
@@ -654,18 +802,18 @@ void DrawPolygon(vector<Vertex> vertices)
 	//Backface culling
 	if(IsPolygonInfrontOfCamera(vertices)) {
 
-		printf("old:\n");
+		/*printf("old:\n");
 		for(unsigned int i = 0; i < vertices.size(); i++) {
 			printf("(%f,%f,%f)\n", vertices[i].c.x, vertices[i].c.y, vertices[i].c.z);
-		}
+		}*/
 
 		//Clip polygon - function returns false if new polygon has zero vertices
 		if(Clip(vertices)) {
 
-			printf("new:\n");
+			/*printf("new:\n");
 			for(unsigned int i = 0; i < vertices.size(); i++) {
 				printf("(%f,%f,%f)\n", vertices[i].c.x, vertices[i].c.y, vertices[i].c.z);
-			}
+			}*/
 
 			//Calculate the projection of the polygons vertexes
 			vector<Pixel> vertexPixels(vertices.size());
