@@ -85,12 +85,12 @@ int main( int argc, char* argv[] )
 	screen = InitializeSDL( SCREEN_WIDTH, SCREEN_HEIGHT );
 	t = SDL_GetTicks();	// Set start value for timer.
 
-	/*while( NoQuitMessageSDL() )
+	while( NoQuitMessageSDL() )
 	{
 		Update();
 		Draw();
-	}*/
-	Pixel a;
+	}
+	/*Pixel a;
 	a.x = 0;
 	a.y = 0;
 	Pixel b;
@@ -107,7 +107,7 @@ int main( int argc, char* argv[] )
 
 	for(int i = 0; i < pixels; i++) {
 		printf("(%d,%d) ",line[i].x, line[i].y);
-	}
+	}*/
 
 	SDL_SaveBMP( screen, "screenshot.bmp" );
 
@@ -282,8 +282,8 @@ int calculateOctant(Pixel a, Pixel b) {
 	else {
 		gradient = (float) dy / (float) dx;
 	}
-	printf("(%d,%d), (%d,%d)\n", a.x, a.y, b.x, b.y);
-	printf("gradient: %f\n", gradient);
+	/*printf("(%d,%d), (%d,%d)\n", a.x, a.y, b.x, b.y);
+	printf("gradient: %f\n", gradient);*/
 	
 	if(a.y < b.y && gradient > 1 && gradient < numeric_limits<int>::max()) {
 		return 1;
@@ -386,11 +386,11 @@ void switchFromOctantZeroTo(int octant, Pixel& p) {
 void Interpolate1(Pixel a, Pixel b, vector<Pixel>& result) {
 
 	int octant = calculateOctant(a, b);
-	printf("octant: %d\n", octant);
+	//printf("octant: %d\n", octant);
 	switchToOctantZeroFrom(octant, a);
 	switchToOctantZeroFrom(octant, b);
 
-	printf("new coordinates: (%d,%d) (%d,%d)\n", a.x, a.y, b.x, b.y);
+	//printf("new coordinates: (%d,%d) (%d,%d)\n", a.x, a.y, b.x, b.y);
 
 	int N = result.size();
 
@@ -460,15 +460,15 @@ void ComputePolygonRows(const vector<Pixel>& vertexPixels, vector<Pixel>& leftPi
 		Pixel b = vertexPixels[j];
 
 		//calculate the number of pixels needed for the line between a and b		
-		int pixels = abs(a.x - b.x) + 1;
+		int pixels = max(abs(a.x - b.x), abs(a.y - b.y)) + 1;
 		vector<Pixel> line(pixels);
 
 		//Interpolate the points on the line between a and b
 		Interpolate1(a,b,line);
-		for(unsigned int i = 0; i < line.size(); i++) {
+		/*for(unsigned int i = 0; i < line.size(); i++) {
 			printf("(%d,%d) ", line[i].x, line[i].y);
 		}
-		printf("\n");
+		printf("\n");*/
 	
 		//Iterate through all of the interpolated points on the line		
 		for(unsigned int k = 0; k < line.size(); k++)
@@ -508,7 +508,7 @@ void DrawPolygonRows(const vector<Pixel>& leftPixels, const vector<Pixel>& right
 		vector<Pixel> line(pixels);
 
 		//Interpolate between these pixels (as we need to calculate the zinv values for each pixel)
-		Interpolate(leftPixels[i], rightPixels[i], line);
+		Interpolate1(leftPixels[i], rightPixels[i], line);
 
 		//Iterate over all the interpolated pixels
 		for(int j = 0; j < pixels; j++) {
