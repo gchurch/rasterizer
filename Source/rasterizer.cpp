@@ -390,9 +390,14 @@ void Interpolate1(Pixel a, Pixel b, vector<Pixel>& result) {
 	switchToOctantZeroFrom(octant, a);
 	switchToOctantZeroFrom(octant, b);
 
-	//printf("new coordinates: (%d,%d) (%d,%d)\n", a.x, a.y, b.x, b.y);
-
 	int N = result.size();
+
+	//printf("new coordinates: (%d,%d) (%d,%d)\n", a.x, a.y, b.x, b.y);
+	float stepZinv = (b.zinv - a.zinv) / float(max(N-1,1));
+	vec3 stepPos3d = (b.pos3d - a.pos3d) / float(max(N-1,1));
+
+	float currentZinv = (float) a.zinv;
+	vec3 currentPos3d = a.pos3d;
 
 	//Calculate the steps needed in the x and y direction, and also the step needed for the zinv
 	int dx = b.x - a.x;
@@ -404,13 +409,15 @@ void Interpolate1(Pixel a, Pixel b, vector<Pixel>& result) {
 		int x = i + a.x;
 		result[i].x = x;
 		result[i].y = y;
-		result[i].zinv = a.zinv;
-		result[i].pos3d = a.pos3d;
+		result[i].zinv = currentZinv;
+		result[i].pos3d = currentPos3d;
 		if(D > 0) {
 			y = y + 1;
 			D = D - 2 * dx;
 		}
 		D = D + 2 * dy;
+		currentZinv += stepZinv;
+		currentPos3d += stepPos3d;
 	}
 
 	for(unsigned int i = 0; i < result.size(); i++) {
