@@ -73,7 +73,6 @@ void ComputePolygonRows(const vector<Pixel>& vertexPixels, vector<Pixel>& leftPi
 void DrawPolygonRows(const vector<Pixel>& leftPixels, const vector<Pixel>& rightPixels);
 void VertexShader(const Vertex& v, Pixel& p);
 void DrawPolygon(vector<Vertex> vertices);
-void Interpolate1(Pixel a, Pixel b, vector<Pixel>& result);
 
 void PixelShader(const Pixel& p);
 
@@ -90,24 +89,6 @@ int main( int argc, char* argv[] )
 		Update();
 		Draw();
 	}
-	/*Pixel a;
-	a.x = 0;
-	a.y = 0;
-	Pixel b;
-	b.x = -10;
-	b.y = 0;
-
-	printf("(%d,%d) (%d,%d)\n", a.x, a.y, b.x, b.y);
-
-	int pixels = max(abs(a.x - b.x), abs(a.y - b.y)) + 1;
-	vector<Pixel> line(pixels);
-
-	//Interpolate the points on the line between a and b
-	Interpolate1(a,b,line);
-
-	for(int i = 0; i < pixels; i++) {
-		printf("(%d,%d) ",line[i].x, line[i].y);
-	}*/
 
 	SDL_SaveBMP( screen, "screenshot.bmp" );
 
@@ -236,39 +217,6 @@ void updateRotationMatrix() {
 	cameraRot = yRot * xRot;
 }
 
-//Interpolate the points on a line between vectors a and b and put the points into result
-void Interpolate(Pixel a, Pixel b, vector<Pixel>& result) {
-
-	//Calculate the steps needed in the x and y direction, and also the step needed for the zinv
-	int N = result.size();
-	float stepX = (float) (b.x - a.x) / float(max(N-1,1));
-	float stepY = (float) (b.y - a.y) / float(max(N-1,1));
-	float stepZinv = (b.zinv - a.zinv) / float(max(N-1,1));
-	vec3 stepPos3d = (b.pos3d - a.pos3d) / float(max(N-1,1));
-
-	//Set the accumulator values to the same as vector a
-	float currentX = (float) a.x;
-	float currentY = (float) a.y;
-	float currentZinv = (float) a.zinv;
-	vec3 currentPos3d = a.pos3d;
-
-	//Calculate each point on the line
-	for(int i = 0; i < N; i++)
-	{
-		//Store the interpolated point in the result list
-		result[i].x = round(currentX);
-		result[i].y = round(currentY);
-		result[i].zinv = currentZinv;
-		result[i].pos3d = currentPos3d;
-
-		//Update the accumulator values
-		currentX += stepX;
-		currentY += stepY;
-		currentZinv += stepZinv;
-		currentPos3d += stepPos3d;
-	}
-}
-
 int calculateOctant(Pixel a, Pixel b) {
 	int dx = b.x - a.x;
 	int dy = b.y - a.y;
@@ -383,7 +331,7 @@ void switchFromOctantZeroTo(int octant, Pixel& p) {
 }
 
 //Interpolate the points on a line between vectors a and b and put the points into result
-void Interpolate1(Pixel a, Pixel b, vector<Pixel>& result) {
+void Interpolate(Pixel a, Pixel b, vector<Pixel>& result) {
 
 	int octant = calculateOctant(a, b);
 	//printf("octant: %d\n", octant);
@@ -471,7 +419,7 @@ void ComputePolygonRows(const vector<Pixel>& vertexPixels, vector<Pixel>& leftPi
 		vector<Pixel> line(pixels);
 
 		//Interpolate the points on the line between a and b
-		Interpolate1(a,b,line);
+		Interpolate(a,b,line);
 		/*for(unsigned int i = 0; i < line.size(); i++) {
 			printf("(%d,%d) ", line[i].x, line[i].y);
 		}
@@ -515,7 +463,7 @@ void DrawPolygonRows(const vector<Pixel>& leftPixels, const vector<Pixel>& right
 		vector<Pixel> line(pixels);
 
 		//Interpolate between these pixels (as we need to calculate the zinv values for each pixel)
-		Interpolate1(leftPixels[i], rightPixels[i], line);
+		Interpolate(leftPixels[i], rightPixels[i], line);
 
 		//Iterate over all the interpolated pixels
 		for(int j = 0; j < pixels; j++) {
