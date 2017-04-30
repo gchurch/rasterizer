@@ -73,6 +73,7 @@ void ComputePolygonRows(const vector<Pixel>& vertexPixels, vector<Pixel>& leftPi
 void DrawPolygonRows(const vector<Pixel>& leftPixels, const vector<Pixel>& rightPixels);
 void VertexShader(const Vertex& v, Pixel& p);
 void DrawPolygon(vector<Vertex> vertices);
+void Interpolate1(Pixel a, Pixel b, vector<Pixel>& result);
 
 void PixelShader(const Pixel& p);
 
@@ -84,10 +85,28 @@ int main( int argc, char* argv[] )
 	screen = InitializeSDL( SCREEN_WIDTH, SCREEN_HEIGHT );
 	t = SDL_GetTicks();	// Set start value for timer.
 
-	while( NoQuitMessageSDL() )
+	/*while( NoQuitMessageSDL() )
 	{
 		Update();
 		Draw();
+	}*/
+	Pixel a;
+	a.x = 0;
+	a.y = 0;
+	Pixel b;
+	b.x = -10;
+	b.y = 0;
+
+	printf("(%d,%d) (%d,%d)\n", a.x, a.y, b.x, b.y);
+
+	int pixels = max(abs(a.x - b.x), abs(a.y - b.y)) + 1;
+	vector<Pixel> line(pixels);
+
+	//Interpolate the points on the line between a and b
+	Interpolate1(a,b,line);
+
+	for(int i = 0; i < pixels; i++) {
+		printf("(%d,%d) ",line[i].x, line[i].y);
 	}
 
 	SDL_SaveBMP( screen, "screenshot.bmp" );
@@ -252,117 +271,114 @@ void Interpolate(Pixel a, Pixel b, vector<Pixel>& result) {
 
 int calculateOctant(Pixel a, Pixel b) {
 	int dx = b.x - a.x;
-	int dy = a.y - b.y;
-	float gradient = (float) dy / (float) dx;
-	if(dx == 0) {
+	int dy = b.y - a.y;
+	float gradient;
+	if(dy == 0) {
+		gradient = 0;
+	}
+	else if(dx == 0) {
+		gradient = 10000;
+	}
+	else {
+		gradient = (float) dy / (float) dx;
+	}
+	printf("(%d,%d), (%d,%d)\n", a.x, a.y, b.x, b.y);
+	printf("gradient: %f\n", gradient);
+	
+	if(a.y < b.y && gradient > 1 && gradient < numeric_limits<int>::max()) {
 		return 1;
 	}
-	else if(dy == 0) {
+	else if(a.x < b.x && gradient >= 0 && gradient <= 1) {
 		return 0;
 	}
-	else if(gradient == 1) {
-		return 0;
+	else if(a.x < b.x && gradient < 0 && gradient >= -1) {
+		return 7;
 	}
-	else if(gradient == 1) {
-		if(a.x < b.x) {
-			return 0;
-		}
-		else if(a.x > b.x) {
-			return 4;
-		}
+	else if(a.y > b.y && gradient < -1 && gradient > numeric_limits<int>::min()) {
+		return 6;
 	}
-	else if(gradient == -1) {
-		if(a.x > b.x) {
-			return 3;
-		}
-		else if(a.x < b.x) {
-			return 7;
-		}
+	else if(a.y > b.y && gradient  > 1 && gradient  < numeric_limits<int>::max()) {
+		return 5;
 	}
-	if(a.y < b.y) {
-		if(gradient > 1) {
-			return 1;
-		}
-		else if(gradient < -1) {
-			return 2;
-		}
+	else if(a.x > b.x && gradient > 0 && gradient <= 1) {
+		return 4;
 	}
-	else if(a.x > b.x) {
-		if(gradient <= 0 && gradient >= -1) {
-			return 3;
-		}
-		else if(gradient > 0 && gradient <= 1) {
-			return 4;
-		}
+	else if(a.x > b.x && gradient <= 0 && gradient >= -1) {
+		return 3;
 	}
-	else if(a.y > b.y) {
-		if(gradient > 1) {
-			return 5;
-		}
-		else if(gradient < -1) {
-			return 6;
-		}
+	else if(a.y < b.y && gradient < -1 && gradient > numeric_limits<int>::min()) {
+		return 2;
 	}
-	else if(a.x < b.x) {
-		if(gradient < 0 && gradient >= -1) {
-			return 7;
-		}
-		else if(gradient >= 0 && gradient <= 1) {
-			return 0;
-		}
+	else {
+		return -1;
 	}
-	return -1;
 }
 
 void switchToOctantZeroFrom(int octant, Pixel& p) {
 	int tmp = p.x;
 	switch(octant) {
-		case 0: 
+		case 0:
+			break; 
 		case 1:
 			p.x = p.y;
 			p.y = tmp;
+			break;
 		case 2:
 			p.x = p.y;
 			p.y = -tmp;
+			break;
 		case 3:
 			p.x = -p.x;
+			break;
 		case 4:
 			p.x = -p.x;
 			p.y = -p.y;
+			break;
 		case 5:
 			p.x = -p.y;
 			p.y = -tmp;
+			break;
 		case 6:
 			p.x = -p.y;
-			p.y = p.x;
+			p.y = tmp;
+			break;
 		case 7:
 			p.y = -p.y;
+			break;
 	}
 }
 
 void switchFromOctantZeroTo(int octant, Pixel& p) {
 	int tmp = p.x;
 	switch(octant) {
-		case 0: 
+		case 0:
+			break;
 		case 1:
 			p.x = p.y;
 			p.y = tmp;
+			break;
 		case 2:
 			p.x = -p.y;
-			p.y = p.x;
+			p.y = tmp;
+			break;
 		case 3:
 			p.x = -p.x;
+			break;
 		case 4:
 			p.x = -p.x;
 			p.y = -p.y;
+			break;
 		case 5:
 			p.x = -p.y;
 			p.y = -tmp;
+			break;
 		case 6:
 			p.x = p.y;
 			p.y = -tmp;
+			break;
 		case 7:
 			p.y = -p.y;
+			break;
 	}
 }
 
@@ -373,6 +389,8 @@ void Interpolate1(Pixel a, Pixel b, vector<Pixel>& result) {
 	printf("octant: %d\n", octant);
 	switchToOctantZeroFrom(octant, a);
 	switchToOctantZeroFrom(octant, b);
+
+	printf("new coordinates: (%d,%d) (%d,%d)\n", a.x, a.y, b.x, b.y);
 
 	int N = result.size();
 
@@ -390,7 +408,7 @@ void Interpolate1(Pixel a, Pixel b, vector<Pixel>& result) {
 		result[i].pos3d = a.pos3d;
 		if(D > 0) {
 			y = y + 1;
-			D = D - 2 * dy;
+			D = D - 2 * dx;
 		}
 		D = D + 2 * dy;
 	}
@@ -442,11 +460,15 @@ void ComputePolygonRows(const vector<Pixel>& vertexPixels, vector<Pixel>& leftPi
 		Pixel b = vertexPixels[j];
 
 		//calculate the number of pixels needed for the line between a and b		
-		int pixels = max(abs(a.x - b.x), abs(a.y - b.y)) + 1;
+		int pixels = abs(a.x - b.x) + 1;
 		vector<Pixel> line(pixels);
 
 		//Interpolate the points on the line between a and b
-		Interpolate(a,b,line);
+		Interpolate1(a,b,line);
+		for(unsigned int i = 0; i < line.size(); i++) {
+			printf("(%d,%d) ", line[i].x, line[i].y);
+		}
+		printf("\n");
 	
 		//Iterate through all of the interpolated points on the line		
 		for(unsigned int k = 0; k < line.size(); k++)
