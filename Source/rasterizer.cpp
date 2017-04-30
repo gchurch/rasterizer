@@ -473,6 +473,16 @@ void DrawPolygonRows(const vector<Pixel>& leftPixels, const vector<Pixel>& right
 	}
 }
 
+void DrawLine(Pixel a, Pixel b)
+{
+	int pixels = max(abs(a.x - b.x), abs(a.y - b.y)) + 1;
+	vector<Pixel> line(pixels);
+	Interpolate(a,b,line);
+	for(unsigned int i = 0; i < line.size(); ++i) {
+		PixelShader(line[i]);
+	}
+}
+
 //Calculate the Euclidean distance between the two given vectors
 float distanceBetweenPoints(vec3 a, vec3 b) {
 	return sqrt(pow(a.x - b.x, 2) + pow(a.y - b.y, 2) + pow(a.z - b.z, 2));
