@@ -176,6 +176,7 @@ void Draw()
 		SDL_LockSurface(screen);
 
 	//reset the depth buffer
+
 	for(int y = 0; y < SCREEN_HEIGHT; y++) {
 		for(int x = 0; x < SCREEN_WIDTH; x++) {
 			depthBuffer[y][x] = 0;
@@ -542,7 +543,7 @@ void PixelShader(const Pixel& p) {
 
 	//If pixels depth is less than the current pixels depth in the image
 	//then update the image
-	if(p.x >= 0 && p.x <= SCREEN_WIDTH && p.y >= 0 && p.y <= SCREEN_HEIGHT) {
+	if(p.x >= 0 && p.x < SCREEN_WIDTH && p.y >= 0 && p.y < SCREEN_HEIGHT) {
 		if(p.zinv > depthBuffer[p.y][p.x] + epsilon) {
 			depthBuffer[p.y][p.x] = p.zinv;
 			PutPixelSDL(screen, p.x, p.y, illumination);
