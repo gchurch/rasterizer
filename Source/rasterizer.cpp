@@ -28,7 +28,7 @@ float focalLength = 500;
 float posDelta = 0.01;
 float rotDelta = 0.01;
 
-float clipBoundary = 0;
+float clipBoundary = 20;
 float maxDepth = 6.0f;
 
 //Scene information
@@ -101,7 +101,7 @@ void Update()
 	int t2 = SDL_GetTicks();
 	float dt = float(t2-t);
 	t = t2;
-	cout << "Render time: " << dt << " ms." << endl;
+	printf("Render time: %f ms.\n", dt);
 
 	//get key presses and update camera position
 	Uint8* keystate = SDL_GetKeyState(0);
@@ -578,6 +578,7 @@ Vertex ClipRight(Vertex start, Vertex end) {
 	float w = (1.0f - a) * start.w + a * end.w;
 	float ratio = w / (P.c.z / focalLength);
 	P.c = P.c / ratio;
+	P.w = (P.c.z / focalLength);
 
 	return P;
 }
@@ -617,6 +618,7 @@ Vertex ClipLeft(Vertex start, Vertex end) {
 	float w = (1.0f - a) * start.w + a * end.w;
 	float ratio = w / (P.c.z / focalLength);
 	P.c = P.c / ratio;
+	P.w = (P.c.z / focalLength);
 
 	return P;
 }
@@ -656,6 +658,7 @@ Vertex ClipTop(Vertex start, Vertex end) {
 	float w = (1.0f - a) * start.w + a * end.w;
 	float ratio = w / (P.c.z / focalLength);
 	P.c = P.c / ratio;
+	P.w = (P.c.z / focalLength);
 
 	return P;
 }
@@ -695,6 +698,7 @@ Vertex ClipBottom(Vertex start, Vertex end) {
 	float w = (1.0f - a) * start.w + a * end.w;
 	float ratio = w / (P.c.z / focalLength);
 	P.c = P.c / ratio;
+	P.w = (P.c.z / focalLength);
 
 	return P;
 }
@@ -726,7 +730,7 @@ void ClipBottomEdge(vector<Vertex>& inputList, vector<Vertex>& outputList) {
 
 bool Clip(vector<Vertex>& vertices) {
 
-	/*ClipSpace(vertices);
+	ClipSpace(vertices);
 
 	vector<Vertex> outputList = vertices;
 	vector<Vertex> inputList;
@@ -751,7 +755,7 @@ bool Clip(vector<Vertex>& vertices) {
 
 	ClipBottomEdge(inputList, outputList);
 
-	vertices = outputList;*/
+	vertices = outputList;
 
 	return (vertices.size() > 0);
 }
