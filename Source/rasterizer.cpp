@@ -19,6 +19,9 @@ const int SCREEN_HEIGHT = 500;
 SDL_Surface* screen;
 int t;
 
+//Textures
+SDL_Surface* tile256x256;
+
 //Camera information
 vec3 cameraPos(0, 0, -4.001);
 mat3 cameraRot(vec3(1,0,0), vec3(0,1,0), vec3(0,0,1));
@@ -64,10 +67,10 @@ vec3 currentReflectance;
 /* ----------------------------------------------------------------------------*/
 /* FUNCTIONS                                                                   */
 
+void LoadTextures();
 void Update();
 void Draw();
 void updateRotationMatrix();
-
 void Interpolate(Pixel a, Pixel b, vector<Pixel>& result);
 void ComputePolygonRows(const vector<Pixel>& vertexPixels, vector<Pixel>& leftPixels, vector<Pixel>& rightPixels);
 void DrawPolygonRows(const vector<Pixel>& leftPixels, const vector<Pixel>& rightPixels);
@@ -78,6 +81,9 @@ void PixelShader(const Pixel& p);
 
 int main( int argc, char* argv[] )
 {
+	//Load in the textures
+	LoadTextures();
+
 	//Load in the scene
 	LoadTestModel(triangles);
 
@@ -93,6 +99,10 @@ int main( int argc, char* argv[] )
 	SDL_SaveBMP( screen, "screenshot.bmp" );
 
 	return 0;
+}
+
+void LoadTextures() {
+	tile256x256 = SDL_LoadBMP("images/tile.bmp");
 }
 
 void Update()
