@@ -15,9 +15,10 @@ public:
 	glm::vec3 v2;
 	glm::vec3 normal;
 	glm::vec3 color;
+	int texture;
 
-	Triangle( glm::vec3 v0, glm::vec3 v1, glm::vec3 v2, glm::vec3 color )
-		: v0(v0), v1(v1), v2(v2), color(color)
+	Triangle( glm::vec3 v0, glm::vec3 v1, glm::vec3 v2, glm::vec3 color, int texture )
+		: v0(v0), v1(v1), v2(v2), color(color), texture(texture)
 	{
 		ComputeNormal();
 	}
@@ -66,24 +67,24 @@ void LoadTestModel( std::vector<Triangle>& triangles )
 	vec3 H(0,L,L);
 
 	// Floor:
-	triangles.push_back( Triangle( C, B, A, green ) );
-	triangles.push_back( Triangle( C, D, B, green ) );
+	triangles.push_back( Triangle( C, B, A, green, 0 ) );
+	triangles.push_back( Triangle( C, D, B, green, 0 ) );
 
 	// Left wall
-	triangles.push_back( Triangle( A, E, C, purple ) );
-	triangles.push_back( Triangle( C, E, G, purple ) );
+	triangles.push_back( Triangle( A, E, C, purple, 0 ) );
+	triangles.push_back( Triangle( C, E, G, purple, 0 ) );
 
 	// Right wall
-	triangles.push_back( Triangle( F, B, D, yellow ) );
-	triangles.push_back( Triangle( H, F, D, yellow ) );
+	triangles.push_back( Triangle( F, B, D, yellow, 0 ) );
+	triangles.push_back( Triangle( H, F, D, yellow, 0 ) );
 
 	// Ceiling
-	triangles.push_back( Triangle( E, F, G, cyan ) );
-	triangles.push_back( Triangle( F, H, G, cyan ) );
+	triangles.push_back( Triangle( E, F, G, cyan, 0 ) );
+	triangles.push_back( Triangle( F, H, G, cyan, 0 ) );
 
 	// Back wall
-	triangles.push_back( Triangle( G, D, C, white ) );
-	triangles.push_back( Triangle( G, H, D, white ) );
+	triangles.push_back( Triangle( G, D, C, white, 0 ) );
+	triangles.push_back( Triangle( G, H, D, white, 0 ) );
 
 	// ---------------------------------------------------------------------------
 	// Short block
@@ -99,24 +100,24 @@ void LoadTestModel( std::vector<Triangle>& triangles )
 	H = vec3( 82,165,225);
 
 	// Front
-	triangles.push_back( Triangle(E,B,A,red) );
-	triangles.push_back( Triangle(E,F,B,red) );
+	triangles.push_back( Triangle(E,B,A,red,0) );
+	triangles.push_back( Triangle(E,F,B,red,0) );
 
 	// Front
-	triangles.push_back( Triangle(F,D,B,red) );
-	triangles.push_back( Triangle(F,H,D,red) );
+	triangles.push_back( Triangle(F,D,B,red,0) );
+	triangles.push_back( Triangle(F,H,D,red,0) );
 
 	// BACK
-	triangles.push_back( Triangle(H,C,D,red) );
-	triangles.push_back( Triangle(H,G,C,red) );
+	triangles.push_back( Triangle(H,C,D,red,0) );
+	triangles.push_back( Triangle(H,G,C,red,0) );
 
 	// LEFT
-	triangles.push_back( Triangle(G,E,C,red) );
-	triangles.push_back( Triangle(E,A,C,red) );
+	triangles.push_back( Triangle(G,E,C,red,0) );
+	triangles.push_back( Triangle(E,A,C,red,0) );
 
 	// TOP
-	triangles.push_back( Triangle(G,F,E,red) );
-	triangles.push_back( Triangle(G,H,F,red) );
+	triangles.push_back( Triangle(G,F,E,red,0) );
+	triangles.push_back( Triangle(G,H,F,red,0) );
 
 	// ---------------------------------------------------------------------------
 	// Tall block
@@ -132,24 +133,24 @@ void LoadTestModel( std::vector<Triangle>& triangles )
 	H = vec3(314,330,456);
 
 	// Front
-	triangles.push_back( Triangle(E,B,A,blue) );
-	triangles.push_back( Triangle(E,F,B,blue) );
+	triangles.push_back( Triangle(E,B,A,blue,0) );
+	triangles.push_back( Triangle(E,F,B,blue,0) );
 
 	// Front
-	triangles.push_back( Triangle(F,D,B,blue) );
-	triangles.push_back( Triangle(F,H,D,blue) );
+	triangles.push_back( Triangle(F,D,B,blue,0) );
+	triangles.push_back( Triangle(F,H,D,blue,0) );
 
 	// BACK
-	triangles.push_back( Triangle(H,C,D,blue) );
-	triangles.push_back( Triangle(H,G,C,blue) );
+	triangles.push_back( Triangle(H,C,D,blue,0) );
+	triangles.push_back( Triangle(H,G,C,blue,0) );
 
 	// LEFT
-	triangles.push_back( Triangle(G,E,C,blue) );
-	triangles.push_back( Triangle(E,A,C,blue) );
+	triangles.push_back( Triangle(G,E,C,blue,0) );
+	triangles.push_back( Triangle(E,A,C,blue,0) );
 
 	// TOP
-	triangles.push_back( Triangle(G,F,E,blue) );
-	triangles.push_back( Triangle(G,H,F,blue) );
+	triangles.push_back( Triangle(G,F,E,blue,0) );
+	triangles.push_back( Triangle(G,H,F,blue,0) );
 
 
 	// ----------------------------------------------
