@@ -20,7 +20,7 @@ SDL_Surface* screen;
 int t;
 
 //Camera information
-vec3 cameraPos(0, 0, -3.001);
+vec3 cameraPos(0, 0, -4.001);
 mat3 cameraRot(vec3(1,0,0), vec3(0,1,0), vec3(0,0,1));
 float yaw = 0;
 float pitch = 0;
@@ -28,7 +28,7 @@ float focalLength = 500;
 float posDelta = 0.01;
 float rotDelta = 0.01;
 
-float clipBoundary = 20;
+float clipBoundary = 0;
 float maxDepth = 6.0f;
 
 //Scene information
@@ -544,7 +544,7 @@ void PixelShader(const Pixel& p) {
 	//If pixels depth is less than the current pixels depth in the image
 	//then update the image
 	if(p.x >= 0 && p.x < SCREEN_WIDTH && p.y >= 0 && p.y < SCREEN_HEIGHT) {
-		if(p.zinv > depthBuffer[p.y][p.x] + epsilon) {
+		if(p.zinv > depthBuffer[p.y][p.x] + epsilon && p.zinv > 0) {
 			depthBuffer[p.y][p.x] = p.zinv;
 			PutPixelSDL(screen, p.x, p.y, illumination);
 		}
@@ -592,14 +592,14 @@ void ClipRightEdge(vector<Vertex>& inputList, vector<Vertex>& outputList) {
 		float startxmax = start.w * ((float) SCREEN_WIDTH / 2.0f - clipBoundary);
 		float endxmax = end.w * ((float) SCREEN_WIDTH / 2.0f - clipBoundary);
 
-		if(end.c.x < endxmax - epsilon) {
-			if(start.c.x > startxmax + epsilon) {
+		if(end.c.x < endxmax) {
+			if(start.c.x > startxmax) {
 				Vertex P = ClipRight(start, end);
 				outputList.push_back(P);
 			}
 			outputList.push_back(end);
 		}
-		else if(start.c.x < startxmax - epsilon) {
+		else if(start.c.x < startxmax) {
 			Vertex P = ClipRight(start, end);
 			outputList.push_back(P);
 		}
@@ -632,14 +632,14 @@ void ClipLeftEdge(vector<Vertex>& inputList, vector<Vertex>& outputList) {
 		float startxmin = -start.w * ((float) SCREEN_WIDTH / 2.0f - clipBoundary);
 		float endxmin = -end.w * ((float) SCREEN_WIDTH / 2.0f - clipBoundary);
 
-		if(end.c.x > endxmin + epsilon) {
-			if(start.c.x < startxmin - epsilon) {
+		if(end.c.x > endxmin) {
+			if(start.c.x < startxmin) {
 				Vertex P = ClipLeft(start, end);
 				outputList.push_back(P);
 			}
 			outputList.push_back(end);
 		}
-		else if(start.c.x > startxmin + epsilon) {
+		else if(start.c.x > startxmin) {
 			Vertex P = ClipLeft(start, end);
 			outputList.push_back(P);
 		}
@@ -705,9 +705,10 @@ Vertex ClipBottom(Vertex start, Vertex end) {
 
 void ClipBottomEdge(vector<Vertex>& inputList, vector<Vertex>& outputList) {
 
-    Vertex start = inputList[inputList.size() - 1];
+    //Vertex start = inputList[inputList.size() - 1];
 	for(unsigned int i = 0; i < inputList.size(); i++) {
-		Vertex end = inputList[i];
+		Vertex start = inputList[i];
+		Vertex end = inputList[(i+1)%inputList.size()];
 
 		float startymax = start.w * ((float) SCREEN_HEIGHT / 2.0f - clipBoundary);
 		float endymax = end.w * ((float) SCREEN_HEIGHT / 2.0f - clipBoundary);
@@ -723,7 +724,7 @@ void ClipBottomEdge(vector<Vertex>& inputList, vector<Vertex>& outputList) {
 			Vertex P = ClipBottom(start, end);
 			outputList.push_back(P);
 		}
-		start = end;
+		//start = end;
 	}
 }
 
@@ -738,7 +739,7 @@ bool Clip(vector<Vertex>& vertices) {
 	inputList = outputList;
 	outputList.clear();
 
-	ClipLeftEdge(inputList, outputList);	
+	ClipBottomEdge(inputList, outputList);
 
 	inputList = outputList;
 	outputList.clear();
@@ -753,7 +754,7 @@ bool Clip(vector<Vertex>& vertices) {
 	inputList = outputList;
 	outputList.clear();
 
-	ClipBottomEdge(inputList, outputList);
+	ClipLeftEdge(inputList, outputList);
 
 	vertices = outputList;
 
@@ -794,18 +795,8 @@ void DrawPolygon(vector<Vertex> vertices)
 	//Backface culling
 	if(IsPolygonInfrontOfCamera(vertices)) {
 
-		/*printf("old:\n");
-		for(unsigned int i = 0; i < vertices.size(); i++) {
-			printf("(%f,%f,%f)\n", vertices[i].c.x, vertices[i].c.y, vertices[i].c.z);
-		}*/
-
 		//Clip polygon - function returns false if new polygon has zero vertices
 		if(Clip(vertices)) {
-
-			/*printf("new:\n");
-			for(unsigned int i = 0; i < vertices.size(); i++) {
-				printf("(%f,%f,%f)\n", vertices[i].c.x, vertices[i].c.y, vertices[i].c.z);
-			}*/
 
 			//Calculate the projection of the polygons vertexes
 			vector<Pixel> vertexPixels(vertices.size());
