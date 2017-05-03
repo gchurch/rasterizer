@@ -508,8 +508,8 @@ void TransformVertex(Vertex& v) {
 void VertexShader(const Vertex& v, Pixel& p) {
 
 	//project the x and y values
-	p.x = (int) (focalLength * (v.c.x / v.c.z) + ((float) SCREEN_WIDTH / 2.0f));
-	p.y = (int) (focalLength * (v.c.y / v.c.z) + ((float) SCREEN_HEIGHT / 2.0f));
+	p.x = round(focalLength * (v.c.x / v.c.z) + ((float) SCREEN_WIDTH / 2.0f));
+	p.y = round(focalLength * (v.c.y / v.c.z) + ((float) SCREEN_HEIGHT / 2.0f));
 
 	//calculate the inverse of the depth of the point
 	p.zinv = 1.0f/(float)v.c.z;
