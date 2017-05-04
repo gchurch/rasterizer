@@ -219,7 +219,6 @@ void Draw()
 
 		//draw the triangle
 		DrawPolygon(vertices);
-
 	}
 
 
