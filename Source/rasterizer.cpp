@@ -367,13 +367,9 @@ void Interpolate(Pixel a, Pixel b, vector<Pixel>& result) {
 
 	float stepZinv = (b.zinv - a.zinv) / float(max(N-1,1));
 	vec3 stepPos3d = (b.pos3d - a.pos3d) / float(max(N-1,1));
-	float textureCoordinatesStepX = ((float) (b.textureCoordinates.x - a.textureCoordinates.x)) / float(max(N-1,1));
-	float textureCoordinatesStepY = ((float) (b.textureCoordinates.y - a.textureCoordinates.y)) / float(max(N-1,1));
-
+	
 	float currentZinv = (float) a.zinv;
 	vec3 currentPos3d = a.pos3d;
-	float currentTextureCoordinatesX = (float) a.textureCoordinates.x;
-	float currentTextureCoordinatesY = (float) a.textureCoordinates.y;
 
 	//Calculate the steps needed in the x and y direction, and also the step needed for the zinv
 	int dx = b.x - a.x;
@@ -399,12 +395,12 @@ void Interpolate(Pixel a, Pixel b, vector<Pixel>& result) {
 		currentPos3d += stepPos3d;
 	}
 
+	//Interpolate out the texture coordinates
 	if(currentTexture != NULL) {
 		for(int i = 0; i < N; i++) {
-			result[i].textureCoordinates.x = round(currentTextureCoordinatesX);
-			result[i].textureCoordinates.y = round(currentTextureCoordinatesY);
-			currentTextureCoordinatesX += textureCoordinatesStepX;
-			currentTextureCoordinatesY += textureCoordinatesStepY;
+			float q = (float) i / (float) N;
+			result[i].textureCoordinates.x = ((a.textureCoordinates.x * a.zinv) * (1 - q) + (b.textureCoordinates.x * b.zinv) * q) / result[i].zinv;
+			result[i].textureCoordinates.y = ((a.textureCoordinates.y * a.zinv) * (1 - q) + (b.textureCoordinates.y * b.zinv) * q) / result[i].zinv;			
 		}
 	}
 
