@@ -6,18 +6,31 @@
 #include <glm/glm.hpp>
 #include <vector>
 
+class V
+{
+public:
+	glm::vec3 pos3d;
+	glm::ivec2 textureCoordinates;
+
+	V(glm::vec3 pos3d, glm::ivec2 textureCoordinates)
+		: pos3d(pos3d), textureCoordinates(textureCoordinates)
+	{
+
+	}
+};
+
 // Used to describe a triangular surface:
 class Triangle
 {
 public:
-	glm::vec3 v0;
-	glm::vec3 v1;
-	glm::vec3 v2;
+	V v0;
+	V v1;
+	V v2;
 	glm::vec3 normal;
 	glm::vec3 color;
 	int texture;
 
-	Triangle( glm::vec3 v0, glm::vec3 v1, glm::vec3 v2, glm::vec3 color, int texture )
+	Triangle( V v0, V v1, V v2, glm::vec3 color, int texture )
 		: v0(v0), v1(v1), v2(v2), color(color), texture(texture)
 	{
 		ComputeNormal();
@@ -25,8 +38,8 @@ public:
 
 	void ComputeNormal()
 	{
-		glm::vec3 e1 = v1-v0;
-		glm::vec3 e2 = v2-v0;
+		glm::vec3 e1 = v1.pos3d-v0.pos3d;
+		glm::vec3 e2 = v2.pos3d-v0.pos3d;
 		normal = glm::normalize( glm::cross( e2, e1 ) );
 	}
 };
@@ -38,6 +51,7 @@ public:
 void LoadTestModel( std::vector<Triangle>& triangles )
 {
 	using glm::vec3;
+	using glm::ivec2;
 
 	// Defines colors:
 	vec3 red(    0.75f, 0.15f, 0.15f );
@@ -56,19 +70,20 @@ void LoadTestModel( std::vector<Triangle>& triangles )
 
 	float L = 555;			// Length of Cornell Box side.
 
-	vec3 A(L,0,0);
-	vec3 B(0,0,0);
-	vec3 C(L,0,L);
-	vec3 D(0,0,L);
+	V A(vec3(L,0,0), ivec2(0,0));
+	V B(vec3(0,0,0), ivec2(0,0));
+	V C(vec3(L,0,L), ivec2(0,0));
+	V D(vec3(0,0,L), ivec2(0,0));
 
-	vec3 E(L,L,0);
-	vec3 F(0,L,0);
-	vec3 G(L,L,L);
-	vec3 H(0,L,L);
+	V E(vec3(L,L,0), ivec2(0,0));
+	V F(vec3(0,L,0), ivec2(0,0));
+	V G(vec3(L,L,L), ivec2(0,0));
+	V H(vec3(0,L,L), ivec2(0,0));
+
 
 	// Floor:
-	triangles.push_back( Triangle( C, B, A, green, 1 ) );
-	triangles.push_back( Triangle( C, D, B, green, 1 ) );
+	triangles.push_back( Triangle( C, B, A, green, 0 ) );
+	triangles.push_back( Triangle( C, D, B, green, 0 ) );
 
 	// Left wall
 	triangles.push_back( Triangle( A, E, C, purple, 0 ) );
@@ -89,15 +104,15 @@ void LoadTestModel( std::vector<Triangle>& triangles )
 	// ---------------------------------------------------------------------------
 	// Short block
 
-	A = vec3(290,0,114);
-	B = vec3(130,0, 65);
-	C = vec3(240,0,272);
-	D = vec3( 82,0,225);
+	A = V(vec3(290,0,114), ivec2(0,0));
+	B = V(vec3(130,0, 65), ivec2(0,0));
+	C = V(vec3(240,0,272), ivec2(0,0));
+	D = V(vec3( 82,0,225), ivec2(0,0));
 
-	E = vec3(290,165,114);
-	F = vec3(130,165, 65);
-	G = vec3(240,165,272);
-	H = vec3( 82,165,225);
+	E = V(vec3(290,165,114), ivec2(0,0));
+	F = V(vec3(130,165, 65), ivec2(0,0));
+	G = V(vec3(240,165,272), ivec2(0,0));
+	H = V(vec3( 82,165,225), ivec2(0,0));
 
 	// Front
 	triangles.push_back( Triangle(E,B,A,red,0) );
@@ -122,15 +137,15 @@ void LoadTestModel( std::vector<Triangle>& triangles )
 	// ---------------------------------------------------------------------------
 	// Tall block
 
-	A = vec3(423,0,247);
-	B = vec3(265,0,296);
-	C = vec3(472,0,406);
-	D = vec3(314,0,456);
+	A = V(vec3(423,0,247), ivec2(0,0));
+	B = V(vec3(265,0,296), ivec2(0,0));
+	C = V(vec3(472,0,406), ivec2(0,0));
+	D = V(vec3(314,0,456), ivec2(0,0));
 
-	E = vec3(423,330,247);
-	F = vec3(265,330,296);
-	G = vec3(472,330,406);
-	H = vec3(314,330,456);
+	E = V(vec3(423,330,247), ivec2(0,0));
+	F = V(vec3(265,330,296), ivec2(0,0));
+	G = V(vec3(472,330,406), ivec2(0,0));
+	H = V(vec3(314,330,456), ivec2(0,0));
 
 	// Front
 	triangles.push_back( Triangle(E,B,A,blue,0) );
@@ -158,21 +173,21 @@ void LoadTestModel( std::vector<Triangle>& triangles )
 
 	for( size_t i=0; i<triangles.size(); ++i )
 	{
-		triangles[i].v0 *= 2/L;
-		triangles[i].v1 *= 2/L;
-		triangles[i].v2 *= 2/L;
+		triangles[i].v0.pos3d *= 2/L;
+		triangles[i].v1.pos3d *= 2/L;
+		triangles[i].v2.pos3d *= 2/L;
 
-		triangles[i].v0 -= vec3(1,1,1);
-		triangles[i].v1 -= vec3(1,1,1);
-		triangles[i].v2 -= vec3(1,1,1);
+		triangles[i].v0.pos3d -= vec3(1,1,1);
+		triangles[i].v1.pos3d -= vec3(1,1,1);
+		triangles[i].v2.pos3d -= vec3(1,1,1);
 
-		triangles[i].v0.x *= -1;
-		triangles[i].v1.x *= -1;
-		triangles[i].v2.x *= -1;
+		triangles[i].v0.pos3d.x *= -1;
+		triangles[i].v1.pos3d.x *= -1;
+		triangles[i].v2.pos3d.x *= -1;
 
-		triangles[i].v0.y *= -1;
-		triangles[i].v1.y *= -1;
-		triangles[i].v2.y *= -1;
+		triangles[i].v0.pos3d.y *= -1;
+		triangles[i].v1.pos3d.y *= -1;
+		triangles[i].v2.pos3d.y *= -1;
 
 		triangles[i].ComputeNormal();
 	}

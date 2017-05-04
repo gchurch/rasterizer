@@ -96,8 +96,8 @@ int main( int argc, char* argv[] )
 
 	while( NoQuitMessageSDL() )
 	{
-		Update();
 		Draw();
+		Update();
 	}
 
 	SDL_SaveBMP( screen, "screenshot.bmp" );
@@ -203,9 +203,9 @@ void Draw()
 		//Create a list of the triangles vertices
 		vector<Vertex> vertices(3);
 		//initalise the vertexes
-		vertices[0].o = triangles[i].v0;
-		vertices[1].o = triangles[i].v1;
-		vertices[2].o = triangles[i].v2;
+		vertices[0].o = triangles[i].v0.pos3d;
+		vertices[1].o = triangles[i].v1.pos3d;
+		vertices[2].o = triangles[i].v2.pos3d;
 		
 		currentNormal = triangles[i].normal;
 		currentReflectance = triangles[i].color;
