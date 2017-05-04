@@ -22,6 +22,9 @@ int t;
 //Textures
 SDL_Surface* tile256x256;
 
+//Current texture information
+SDL_Surface* currentTexture = NULL;
+
 //Camera information
 vec3 cameraPos(0, 0, -4.001);
 mat3 cameraRot(vec3(1,0,0), vec3(0,1,0), vec3(0,0,1));
@@ -31,6 +34,7 @@ float focalLength = 500;
 float posDelta = 0.01;
 float rotDelta = 0.01;
 
+//clipping and culling information
 float clipBoundary = 0;
 float maxDepth = 6.0f;
 
@@ -186,7 +190,6 @@ void Draw()
 		SDL_LockSurface(screen);
 
 	//reset the depth buffer
-
 	for(int y = 0; y < SCREEN_HEIGHT; y++) {
 		for(int x = 0; x < SCREEN_WIDTH; x++) {
 			depthBuffer[y][x] = 0;
@@ -206,6 +209,13 @@ void Draw()
 		
 		currentNormal = triangles[i].normal;
 		currentReflectance = triangles[i].color;
+
+		if(triangles[i].texture == 0) {
+			currentTexture = NULL;
+		}
+		else if(triangles[i].texture == 1) {
+			currentTexture = tile256x256;
+		}
 
 		//draw the triangle
 		DrawPolygon(vertices);
@@ -549,7 +559,15 @@ void PixelShader(const Pixel& p) {
 	//fraction of the power per area depending on surface's angle from light source
 	vec3 D = B * max(dotProduct(r,n),0.0f);
 
-	vec3 illumination = currentReflectance * (D + indirectLightPowerPerArea);
+
+	vec3 color;
+
+	if(currentTexture == NULL) {
+		color = currentReflectance;
+	}
+
+	vec3 illumination = color * (D + indirectLightPowerPerArea);
+
 
 	//If pixels depth is less than the current pixels depth in the image
 	//then update the image
