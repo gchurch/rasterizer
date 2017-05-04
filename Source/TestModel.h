@@ -70,20 +70,20 @@ void LoadTestModel( std::vector<Triangle>& triangles )
 
 	float L = 555;			// Length of Cornell Box side.
 
-	V A(vec3(L,0,0), ivec2(0,0));
-	V B(vec3(0,0,0), ivec2(0,0));
-	V C(vec3(L,0,L), ivec2(255,255));
-	V D(vec3(0,0,L), ivec2(0,255));
+	V A(vec3(L,0,0), ivec2(255,255));
+	V B(vec3(0,0,0), ivec2(0,255));
+	V C(vec3(L,0,L), ivec2(255,0));
+	V D(vec3(0,0,L), ivec2(0,0));
 
 	V E(vec3(L,L,0), ivec2(0,0));
 	V F(vec3(0,L,0), ivec2(0,0));
-	V G(vec3(L,L,L), ivec2(255,0));
+	V G(vec3(L,L,L), ivec2(0,0));
 	V H(vec3(0,L,L), ivec2(0,0));
 
 
 	// Floor:
-	/*triangles.push_back( Triangle( C, B, A, green, 0 ) );
-	triangles.push_back( Triangle( C, D, B, green, 0 ) );
+	triangles.push_back( Triangle( C, B, A, green, 1 ) );
+	triangles.push_back( Triangle( C, D, B, green, 1 ) );
 
 	// Left wall
 	triangles.push_back( Triangle( A, E, C, purple, 0 ) );
@@ -95,11 +95,11 @@ void LoadTestModel( std::vector<Triangle>& triangles )
 
 	// Ceiling
 	triangles.push_back( Triangle( E, F, G, cyan, 0 ) );
-	triangles.push_back( Triangle( F, H, G, cyan, 0 ) );*/
+	triangles.push_back( Triangle( F, H, G, cyan, 0 ) );
 
 	// Back wall
-	triangles.push_back( Triangle( G, D, C, white, 1 ) );
-	triangles.push_back( Triangle( G, H, D, white, 1 ) );
+	triangles.push_back( Triangle( G, D, C, white, 0 ) );
+	triangles.push_back( Triangle( G, H, D, white, 0 ) );
 
 	// ---------------------------------------------------------------------------
 	// Short block
@@ -115,7 +115,7 @@ void LoadTestModel( std::vector<Triangle>& triangles )
 	H = V(vec3( 82,165,225), ivec2(0,0));
 
 	// Front
-	/*triangles.push_back( Triangle(E,B,A,red,0) );
+	triangles.push_back( Triangle(E,B,A,red,0) );
 	triangles.push_back( Triangle(E,F,B,red,0) );
 
 	// Front
@@ -132,7 +132,7 @@ void LoadTestModel( std::vector<Triangle>& triangles )
 
 	// TOP
 	triangles.push_back( Triangle(G,F,E,red,0) );
-	triangles.push_back( Triangle(G,H,F,red,0) );*/
+	triangles.push_back( Triangle(G,H,F,red,0) );
 
 	// ---------------------------------------------------------------------------
 	// Tall block
@@ -148,7 +148,7 @@ void LoadTestModel( std::vector<Triangle>& triangles )
 	H = V(vec3(314,330,456), ivec2(0,0));
 
 	// Front
-	/*triangles.push_back( Triangle(E,B,A,blue,0) );
+	triangles.push_back( Triangle(E,B,A,blue,0) );
 	triangles.push_back( Triangle(E,F,B,blue,0) );
 
 	// Front
@@ -165,7 +165,7 @@ void LoadTestModel( std::vector<Triangle>& triangles )
 
 	// TOP
 	triangles.push_back( Triangle(G,F,E,blue,0) );
-	triangles.push_back( Triangle(G,H,F,blue,0) );*/
+	triangles.push_back( Triangle(G,H,F,blue,0) );
 
 
 	// ----------------------------------------------
