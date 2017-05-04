@@ -20,17 +20,17 @@ SDL_Surface* screen;
 int t;
 
 //Textures
-SDL_Surface* tile256x256;
-SDL_Surface* tile128x128;
-SDL_Surface* tile64x64;
-SDL_Surface* tile32x32;
-SDL_Surface* tile16x16;
-SDL_Surface* tile8x8;
-SDL_Surface* tile4x4;
-SDL_Surface* tile2x2;
-SDL_Surface* tile1x1;
+SDL_Surface* checkered256x256;
+SDL_Surface* checkered128x128;
+SDL_Surface* checkered64x64;
+SDL_Surface* checkered32x32;
+SDL_Surface* checkered16x16;
+SDL_Surface* checkered8x8;
+SDL_Surface* checkered4x4;
+SDL_Surface* checkered2x2;
+SDL_Surface* checkered1x1;
 
-enum Texture {None, Tile};
+enum Texture {None, Checkered};
 
 //Current texture information
 Texture currentTexture = None;
@@ -118,15 +118,15 @@ int main( int argc, char* argv[] )
 }
 
 void LoadTextures() {
-	tile256x256 = SDL_LoadBMP("images/tile256x256.bmp");
-	tile128x128 = SDL_LoadBMP("images/tile128x128.bmp");
-	tile64x64 = SDL_LoadBMP("images/tile64x64.bmp");
-	tile32x32 = SDL_LoadBMP("images/tile32x32.bmp");
-	tile16x16 = SDL_LoadBMP("images/tile16x16.bmp");
-	tile8x8 = SDL_LoadBMP("images/tile8x8.bmp");
-	tile4x4 = SDL_LoadBMP("images/tile4x4.bmp");
-	tile2x2 = SDL_LoadBMP("images/tile2x2.bmp");
-	tile1x1 = SDL_LoadBMP("images/tile1x1.bmp");
+	checkered256x256 = SDL_LoadBMP("images/checkered256x256.bmp");
+	checkered128x128 = SDL_LoadBMP("images/checkered128x128.bmp");
+	checkered64x64 = SDL_LoadBMP("images/checkered64x64.bmp");
+	checkered32x32 = SDL_LoadBMP("images/checkered32x32.bmp");
+	checkered16x16 = SDL_LoadBMP("images/checkered16x16.bmp");
+	checkered8x8 = SDL_LoadBMP("images/checkered8x8.bmp");
+	checkered4x4 = SDL_LoadBMP("images/checkered4x4.bmp");
+	checkered2x2 = SDL_LoadBMP("images/checkered2x2.bmp");
+	checkered1x1 = SDL_LoadBMP("images/checkered1x1.bmp");
 }
 
 void Update()
@@ -239,7 +239,7 @@ void Draw()
 			vertices[1].textureCoordinates = triangles[i].v1.textureCoordinates;
 			vertices[2].textureCoordinates = triangles[i].v2.textureCoordinates;
 			if(triangles[i].texture == 1) {
-				currentTexture = Tile;
+				currentTexture = Checkered;
 			}
 		}
 
@@ -599,21 +599,21 @@ void PixelShader(const Pixel& p) {
 		color = currentReflectance;
 	}
 	else {
-		if(currentTexture == Tile) {
+		if(currentTexture == Checkered) {
 			if(p.zinv > 0.4f) {
-				color = GetPixelSDL(tile256x256, p.textureCoordinates.x, p.textureCoordinates.y);
+				color = GetPixelSDL(checkered256x256, p.textureCoordinates.x, p.textureCoordinates.y);
 			}
 			else if(p.zinv > 0.2f) {
-				color = GetPixelSDL(tile128x128, p.textureCoordinates.x / 2, p.textureCoordinates.y / 2);			
+				color = GetPixelSDL(checkered128x128, p.textureCoordinates.x / 2, p.textureCoordinates.y / 2);			
 			}
 			else if(p.zinv > 0.05f) {
-				color = GetPixelSDL(tile64x64, p.textureCoordinates.x / 4, p.textureCoordinates.y / 4);			
+				color = GetPixelSDL(checkered64x64, p.textureCoordinates.x / 4, p.textureCoordinates.y / 4);			
 			}
 			else if(p.zinv > 0.025f) {
-				color = GetPixelSDL(tile32x32, p.textureCoordinates.x / 8, p.textureCoordinates.y / 8);			
+				color = GetPixelSDL(checkered32x32, p.textureCoordinates.x / 8, p.textureCoordinates.y / 8);			
 			}
 			else if(p.zinv > 0.025f) {
-				color = GetPixelSDL(tile16x16, p.textureCoordinates.x / 16, p.textureCoordinates.y / 16);			
+				color = GetPixelSDL(checkered16x16, p.textureCoordinates.x / 16, p.textureCoordinates.y / 16);			
 			}
 		}
 	}
