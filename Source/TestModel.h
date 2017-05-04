@@ -70,10 +70,10 @@ void LoadTestModel( std::vector<Triangle>& triangles )
 
 	float L = 555;			// Length of Cornell Box side.
 
-	V A(vec3(L,0,0), ivec2(255,255));
-	V B(vec3(0,0,0), ivec2(0,255));
-	V C(vec3(L,0,L), ivec2(255,0));
-	V D(vec3(0,0,L), ivec2(0,0));
+	V A(vec3(L,0,0), ivec2(0,0));
+	V B(vec3(0,0,0), ivec2(255,0));
+	V C(vec3(L,0,L), ivec2(0,255));
+	V D(vec3(0,0,L), ivec2(255,255));
 
 	V E(vec3(L,L,0), ivec2(0,0));
 	V F(vec3(0,L,0), ivec2(0,0));

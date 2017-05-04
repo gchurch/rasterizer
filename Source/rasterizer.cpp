@@ -26,7 +26,7 @@ SDL_Surface* tile256x256;
 SDL_Surface* currentTexture = NULL;
 
 //Camera information
-vec3 cameraPos(0, 0, -4.001);
+vec3 cameraPos(0, 0, -3.001);
 mat3 cameraRot(vec3(1,0,0), vec3(0,1,0), vec3(0,0,1));
 float yaw = 0;
 float pitch = 0;
@@ -368,7 +368,7 @@ void Interpolate(Pixel a, Pixel b, vector<Pixel>& result) {
 	float stepZinv = (b.zinv - a.zinv) / float(max(N-1,1));
 	vec3 stepPos3d = (b.pos3d - a.pos3d) / float(max(N-1,1));
 	float textureCoordinatesStepX = ((float) (b.textureCoordinates.x - a.textureCoordinates.x)) / float(max(N-1,1));
-	float textureCoordinatesStepY = ((float) (b.textureCoordinates.y - b.textureCoordinates.y)) / float(max(N-1,1));
+	float textureCoordinatesStepY = ((float) (b.textureCoordinates.y - a.textureCoordinates.y)) / float(max(N-1,1));
 
 	float currentZinv = (float) a.zinv;
 	vec3 currentPos3d = a.pos3d;
@@ -401,8 +401,8 @@ void Interpolate(Pixel a, Pixel b, vector<Pixel>& result) {
 
 	if(currentTexture != NULL) {
 		for(int i = 0; i < N; i++) {
-			result[i].textureCoordinates.x = currentTextureCoordinatesX;
-			result[i].textureCoordinates.y = currentTextureCoordinatesY;
+			result[i].textureCoordinates.x = round(currentTextureCoordinatesX);
+			result[i].textureCoordinates.y = round(currentTextureCoordinatesY);
 			currentTextureCoordinatesX += textureCoordinatesStepX;
 			currentTextureCoordinatesY += textureCoordinatesStepY;
 		}
@@ -624,6 +624,8 @@ Vertex ClipRight(Vertex start, Vertex end) {
 	Vertex P;
 	P.c = (1.0f - a) * start.c + a * end.c;
 	P.o = (1.0f - a) * start.o + a * end.o;
+	P.textureCoordinates.x = round((1.0f - a) * (float) start.textureCoordinates.x + a * (float) end.textureCoordinates.x);
+	P.textureCoordinates.y = round((1.0f - a) * (float) start.textureCoordinates.y + a * (float) end.textureCoordinates.y); 
 
 	float w = (1.0f - a) * start.w + a * end.w;
 	float ratio = w / (P.c.z / focalLength);
@@ -664,6 +666,8 @@ Vertex ClipLeft(Vertex start, Vertex end) {
 	Vertex P;
 	P.c = (1.0f - a) * start.c + a * end.c;
 	P.o = (1.0f - a) * start.o + a * end.o;
+	P.textureCoordinates.x = round((1.0f - a) * (float) start.textureCoordinates.x + a * (float) end.textureCoordinates.x);
+	P.textureCoordinates.y = round((1.0f - a) * (float) start.textureCoordinates.y + a * (float) end.textureCoordinates.y); 
 
 	float w = (1.0f - a) * start.w + a * end.w;
 	float ratio = w / (P.c.z / focalLength);
@@ -704,6 +708,8 @@ Vertex ClipTop(Vertex start, Vertex end) {
 	Vertex P;
 	P.c = (1.0f - a) * start.c + a * end.c;
 	P.o = (1.0f - a) * start.o + a * end.o;
+	P.textureCoordinates.x = round((1.0f - a) * (float) start.textureCoordinates.x + a * (float) end.textureCoordinates.x);
+	P.textureCoordinates.y = round((1.0f - a) * (float) start.textureCoordinates.y + a * (float) end.textureCoordinates.y); 
 
 	float w = (1.0f - a) * start.w + a * end.w;
 	float ratio = w / (P.c.z / focalLength);
@@ -744,6 +750,8 @@ Vertex ClipBottom(Vertex start, Vertex end) {
 	Vertex P;
 	P.c = (1.0f - a) * start.c + a * end.c;
 	P.o = (1.0f - a) * start.o + a * end.o;
+	P.textureCoordinates.x = round((1.0f - a) * (float) start.textureCoordinates.x + a * (float) end.textureCoordinates.x);
+	P.textureCoordinates.y = round((1.0f - a) * (float) start.textureCoordinates.y + a * (float) end.textureCoordinates.y); 
 
 	float w = (1.0f - a) * start.w + a * end.w;
 	float ratio = w / (P.c.z / focalLength);
