@@ -53,12 +53,14 @@ struct Pixel {
 	int y;
 	float zinv;
 	vec3 pos3d;
+	ivec2 textureCoordinates;
 };
 
 struct Vertex {
 	vec3 o;	//position in original coordinate system
 	vec3 c; //position in current coordinate system
-	float w; 
+	float w;
+	ivec2 textureCoordinates;
 };
 
 vec3 lightPos(0,-0.5, -0.7);
@@ -210,11 +212,17 @@ void Draw()
 		currentNormal = triangles[i].normal;
 		currentReflectance = triangles[i].color;
 
+
 		if(triangles[i].texture == 0) {
 			currentTexture = NULL;
 		}
-		else if(triangles[i].texture == 1) {
-			currentTexture = tile256x256;
+		else {
+			vertices[0].textureCoordinates = triangles[i].v0.textureCoordinates;
+			vertices[1].textureCoordinates = triangles[i].v1.textureCoordinates;
+			vertices[2].textureCoordinates = triangles[i].v2.textureCoordinates;
+			if(triangles[i].texture == 1) {
+				currentTexture = tile256x256;
+			}
 		}
 
 		//draw the triangle
@@ -250,8 +258,6 @@ int calculateOctant(Pixel a, Pixel b) {
 	else {
 		gradient = (float) dy / (float) dx;
 	}
-	/*printf("(%d,%d), (%d,%d)\n", a.x, a.y, b.x, b.y);
-	printf("gradient: %f\n", gradient);*/
 	
 	if(a.y < b.y && gradient > 1 && gradient < numeric_limits<int>::max()) {
 		return 1;
@@ -354,18 +360,20 @@ void switchFromOctantZeroTo(int octant, Pixel& p) {
 void Interpolate(Pixel a, Pixel b, vector<Pixel>& result) {
 
 	int octant = calculateOctant(a, b);
-	//printf("octant: %d\n", octant);
 	switchToOctantZeroFrom(octant, a);
 	switchToOctantZeroFrom(octant, b);
 
 	int N = result.size();
 
-	//printf("new coordinates: (%d,%d) (%d,%d)\n", a.x, a.y, b.x, b.y);
 	float stepZinv = (b.zinv - a.zinv) / float(max(N-1,1));
 	vec3 stepPos3d = (b.pos3d - a.pos3d) / float(max(N-1,1));
+	float textureCoordinatesStepX = ((float) (b.textureCoordinates.x - a.textureCoordinates.x)) / float(max(N-1,1));
+	float textureCoordinatesStepY = ((float) (b.textureCoordinates.y - b.textureCoordinates.y)) / float(max(N-1,1));
 
 	float currentZinv = (float) a.zinv;
 	vec3 currentPos3d = a.pos3d;
+	float currentTextureCoordinatesX = (float) a.textureCoordinates.x;
+	float currentTextureCoordinatesY = (float) a.textureCoordinates.y;
 
 	//Calculate the steps needed in the x and y direction, and also the step needed for the zinv
 	int dx = b.x - a.x;
@@ -377,15 +385,27 @@ void Interpolate(Pixel a, Pixel b, vector<Pixel>& result) {
 		int x = i + a.x;
 		result[i].x = x;
 		result[i].y = y;
-		result[i].zinv = currentZinv;
-		result[i].pos3d = currentPos3d;
 		if(D > 0) {
 			y = y + 1;
 			D = D - 2 * dx;
 		}
 		D = D + 2 * dy;
+	}
+
+	for(int i = 0; i < N; i++) {
+		result[i].zinv = currentZinv;
+		result[i].pos3d = currentPos3d;
 		currentZinv += stepZinv;
 		currentPos3d += stepPos3d;
+	}
+
+	if(currentTexture != NULL) {
+		for(int i = 0; i < N; i++) {
+			result[i].textureCoordinates.x = currentTextureCoordinatesX;
+			result[i].textureCoordinates.y = currentTextureCoordinatesY;
+			currentTextureCoordinatesX += textureCoordinatesStepX;
+			currentTextureCoordinatesY += textureCoordinatesStepY;
+		}
 	}
 
 	for(unsigned int i = 0; i < result.size(); i++) {
@@ -440,10 +460,6 @@ void ComputePolygonRows(const vector<Pixel>& vertexPixels, vector<Pixel>& leftPi
 
 		//Interpolate the points on the line between a and b
 		Interpolate(a,b,line);
-		/*for(unsigned int i = 0; i < line.size(); i++) {
-			printf("(%d,%d) ", line[i].x, line[i].y);
-		}
-		printf("\n");*/
 	
 		//Iterate through all of the interpolated points on the line		
 		for(unsigned int k = 0; k < line.size(); k++)
@@ -457,6 +473,7 @@ void ComputePolygonRows(const vector<Pixel>& vertexPixels, vector<Pixel>& leftPi
 				leftPixels[line[k].y - minY].y = line[k].y;
 				leftPixels[line[k].y - minY].zinv = line[k].zinv;
 				leftPixels[line[k].y - minY].pos3d = line[k].pos3d;
+				leftPixels[line[k].y - minY].textureCoordinates = line[k].textureCoordinates;
 			}
 
 			//if the x value for this y coordinate is greater than the current x value for
@@ -467,6 +484,7 @@ void ComputePolygonRows(const vector<Pixel>& vertexPixels, vector<Pixel>& leftPi
 				rightPixels[line[k].y - minY].y = line[k].y;
 				rightPixels[line[k].y - minY].zinv = line[k].zinv;
 				rightPixels[line[k].y - minY].pos3d = line[k].pos3d;
+				rightPixels[line[k].y - minY].textureCoordinates = line[k].textureCoordinates;
 			}
 		}
 	}
@@ -534,6 +552,8 @@ void VertexShader(const Vertex& v, Pixel& p) {
 	p.zinv = 1.0f/(float)v.c.z;
 
 	p.pos3d = v.o * p.zinv;
+
+	p.textureCoordinates = v.textureCoordinates;
 }
 
 void PixelShader(const Pixel& p) {
@@ -563,6 +583,9 @@ void PixelShader(const Pixel& p) {
 
 	if(currentTexture == NULL) {
 		color = currentReflectance;
+	}
+	else {
+		color = GetPixelSDL(currentTexture, p.textureCoordinates.x, p.textureCoordinates.y);
 	}
 
 	vec3 illumination = color * (D + indirectLightPowerPerArea);
@@ -839,11 +862,9 @@ void DrawPolygon(vector<Vertex> vertices)
 
 				//Compute the leftPixels and rightPixels lists from the vertexes
 				ComputePolygonRows(vertexPixels, leftPixels, rightPixels);
-				//printf("compute polygon rows done\n");
 
 				//Draw the polygon
 				DrawPolygonRows(leftPixels, rightPixels);
-				//printf("draw polygon rows done\n");
 			}
 		}
 	}
