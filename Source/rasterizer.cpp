@@ -20,6 +20,7 @@ SDL_Surface* screen;
 int t;
 
 //Textures
+SDL_Surface* checkered512x512;
 SDL_Surface* checkered256x256;
 SDL_Surface* checkered128x128;
 SDL_Surface* checkered64x64;
@@ -118,6 +119,7 @@ int main( int argc, char* argv[] )
 }
 
 void LoadTextures() {
+	checkered512x512 = SDL_LoadBMP("images/checkered512x512.bmp");
 	checkered256x256 = SDL_LoadBMP("images/checkered256x256.bmp");
 	checkered128x128 = SDL_LoadBMP("images/checkered128x128.bmp");
 	checkered64x64 = SDL_LoadBMP("images/checkered64x64.bmp");
@@ -606,8 +608,9 @@ void PixelShader(const Pixel& p) {
 				printf("%f\n", p.zinv);
 				first = false;
 			}
+			color = GetPixelSDL(checkered512x512, p.textureCoordinates.x, p.textureCoordinates.y);
 			//printf("(%d,%d)\n", p.textureCoordinates.x, p.textureCoordinates.y);
-			if(p.zinv > 0.4f) {
+			/*if(p.zinv > 0.4f) {
 				color = GetPixelSDL(checkered256x256, p.textureCoordinates.x, p.textureCoordinates.y);
 			}
 			else if(p.zinv > 0.2f) {
@@ -621,7 +624,7 @@ void PixelShader(const Pixel& p) {
 			}
 			else if(p.zinv > 0.025f) {
 				color = GetPixelSDL(checkered16x16, p.textureCoordinates.x / 16, p.textureCoordinates.y / 16);			
-			}
+			}*/
 		}
 	}
 
