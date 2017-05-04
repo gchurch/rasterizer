@@ -21,6 +21,14 @@ int t;
 
 //Textures
 SDL_Surface* tile256x256;
+SDL_Surface* tile128x128;
+SDL_Surface* tile64x64;
+SDL_Surface* tile32x32;
+SDL_Surface* tile16x16;
+SDL_Surface* tile8x8;
+SDL_Surface* tile4x4;
+SDL_Surface* tile2x2;
+SDL_Surface* tile1x1;
 
 //Current texture information
 SDL_Surface* currentTexture = NULL;
@@ -31,8 +39,8 @@ mat3 cameraRot(vec3(1,0,0), vec3(0,1,0), vec3(0,0,1));
 float yaw = 0;
 float pitch = 0;
 float focalLength = 500;
-float posDelta = 0.01;
-float rotDelta = 0.01;
+float posDelta = 0.1;
+float rotDelta = 0.05;
 
 //clipping and culling information
 float clipBoundary = 0;
@@ -108,7 +116,15 @@ int main( int argc, char* argv[] )
 }
 
 void LoadTextures() {
-	tile256x256 = SDL_LoadBMP("images/tile.bmp");
+	tile256x256 = SDL_LoadBMP("images/tile256x256.bmp");
+	tile128x128 = SDL_LoadBMP("images/tile128x128.bmp");
+	tile64x64 = SDL_LoadBMP("images/tile64x64.bmp");
+	tile32x32 = SDL_LoadBMP("images/tile32x32.bmp");
+	tile16x16 = SDL_LoadBMP("images/tile16x16.bmp");
+	tile8x8 = SDL_LoadBMP("images/tile8x8.bmp");
+	tile4x4 = SDL_LoadBMP("images/tile4x4.bmp");
+	tile2x2 = SDL_LoadBMP("images/tile2x2.bmp");
+	tile1x1 = SDL_LoadBMP("images/tile1x1.bmp");
 }
 
 void Update()
