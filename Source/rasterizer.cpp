@@ -30,8 +30,10 @@ SDL_Surface* tile4x4;
 SDL_Surface* tile2x2;
 SDL_Surface* tile1x1;
 
+enum Texture {None, Tile};
+
 //Current texture information
-SDL_Surface* currentTexture = NULL;
+Texture currentTexture = None;
 
 //Camera information
 vec3 cameraPos(0, 0, -3.001);
@@ -230,14 +232,14 @@ void Draw()
 
 
 		if(triangles[i].texture == 0) {
-			currentTexture = NULL;
+			currentTexture = None;
 		}
 		else {
 			vertices[0].textureCoordinates = triangles[i].v0.textureCoordinates;
 			vertices[1].textureCoordinates = triangles[i].v1.textureCoordinates;
 			vertices[2].textureCoordinates = triangles[i].v2.textureCoordinates;
 			if(triangles[i].texture == 1) {
-				currentTexture = tile256x256;
+				currentTexture = Tile;
 			}
 		}
 
@@ -412,7 +414,7 @@ void Interpolate(Pixel a, Pixel b, vector<Pixel>& result) {
 	}
 
 	//Interpolate out the texture coordinates
-	if(currentTexture != NULL) {
+	if(currentTexture != None) {
 		for(int i = 0; i < N; i++) {
 			float q = (float) i / (float) N;
 			result[i].textureCoordinates.x = ((a.textureCoordinates.x * a.zinv) * (1 - q) + (b.textureCoordinates.x * b.zinv) * q) / result[i].zinv;
@@ -593,15 +595,31 @@ void PixelShader(const Pixel& p) {
 
 	vec3 color;
 
-	if(currentTexture == NULL) {
+	if(currentTexture == None) {
 		color = currentReflectance;
 	}
 	else {
-		color = GetPixelSDL(currentTexture, p.textureCoordinates.x, p.textureCoordinates.y);
+		if(currentTexture == Tile) {
+			if(p.zinv > 0.4f) {
+				color = GetPixelSDL(tile256x256, p.textureCoordinates.x, p.textureCoordinates.y);
+			}
+			else if(p.zinv > 0.2f) {
+				color = GetPixelSDL(tile128x128, p.textureCoordinates.x / 2, p.textureCoordinates.y / 2);			
+			}
+			else if(p.zinv > 0.05f) {
+				color = GetPixelSDL(tile64x64, p.textureCoordinates.x / 4, p.textureCoordinates.y / 4);			
+			}
+			else if(p.zinv > 0.025f) {
+				color = GetPixelSDL(tile32x32, p.textureCoordinates.x / 8, p.textureCoordinates.y / 8);			
+			}
+			else if(p.zinv > 0.025f) {
+				color = GetPixelSDL(tile16x16, p.textureCoordinates.x / 16, p.textureCoordinates.y / 16);			
+			}
+		}
 	}
 
 	vec3 illumination = color * (D + indirectLightPowerPerArea);
-
+	//printf("depth: %f\n", p.zinv);
 
 	//If pixels depth is less than the current pixels depth in the image
 	//then update the image
@@ -873,19 +891,16 @@ void DrawPolygon(vector<Vertex> vertices)
 			for(unsigned int i = 0; i < vertices.size(); i++) {
 				VertexShader(vertices[i], vertexPixels[i]);
 			}
-
-			if(IsPolygonWithinMaxDepth(vertexPixels)) {
 		
-				//lists to store the left most and right post pixel x values for each y value
-				vector<Pixel> leftPixels;
-				vector<Pixel> rightPixels;
+			//lists to store the left most and right post pixel x values for each y value
+			vector<Pixel> leftPixels;
+			vector<Pixel> rightPixels;
 
-				//Compute the leftPixels and rightPixels lists from the vertexes
-				ComputePolygonRows(vertexPixels, leftPixels, rightPixels);
-
-				//Draw the polygon
-				DrawPolygonRows(leftPixels, rightPixels);
-			}
+			//Compute the leftPixels and rightPixels lists from the vertexes
+			ComputePolygonRows(vertexPixels, leftPixels, rightPixels);
+			
+			//Draw the polygon
+			DrawPolygonRows(leftPixels, rightPixels);
 		}
 	}
 }
