@@ -119,16 +119,16 @@ int main( int argc, char* argv[] )
 }
 
 void LoadTextures() {
-	checkered512x512 = SDL_LoadBMP("images/checkered512x512.bmp");
-	checkered256x256 = SDL_LoadBMP("images/checkered256x256.bmp");
-	checkered128x128 = SDL_LoadBMP("images/checkered128x128.bmp");
-	checkered64x64 = SDL_LoadBMP("images/checkered64x64.bmp");
-	checkered32x32 = SDL_LoadBMP("images/checkered32x32.bmp");
-	checkered16x16 = SDL_LoadBMP("images/checkered16x16.bmp");
-	checkered8x8 = SDL_LoadBMP("images/checkered8x8.bmp");
-	checkered4x4 = SDL_LoadBMP("images/checkered4x4.bmp");
-	checkered2x2 = SDL_LoadBMP("images/checkered2x2.bmp");
-	checkered1x1 = SDL_LoadBMP("images/checkered1x1.bmp");
+	checkered512x512 = SDL_LoadBMP("bin/images/checkered512x512.bmp");
+	checkered256x256 = SDL_LoadBMP("bin/images/checkered256x256.bmp");
+	checkered128x128 = SDL_LoadBMP("bin/images/checkered128x128.bmp");
+	checkered64x64 = SDL_LoadBMP("bin/images/checkered64x64.bmp");
+	checkered32x32 = SDL_LoadBMP("bin/images/checkered32x32.bmp");
+	checkered16x16 = SDL_LoadBMP("bin/images/checkered16x16.bmp");
+	checkered8x8 = SDL_LoadBMP("bin/images/checkered8x8.bmp");
+	checkered4x4 = SDL_LoadBMP("bin/images/checkered4x4.bmp");
+	checkered2x2 = SDL_LoadBMP("bin/images/checkered2x2.bmp");
+	checkered1x1 = SDL_LoadBMP("bin/images/checkered1x1.bmp");
 }
 
 void Update()
