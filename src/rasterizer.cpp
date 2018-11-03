@@ -373,7 +373,7 @@ void PixelShader(const Pixel& p) {
 	float radius = distanceBetweenPoints(pos3d, lightPos);
 
 	//The power per area at this point
-	vec3 B = lightPower / (4 * pi * pow(radius,3));
+	vec3 B = lightPower / ((float) 4.0 * pi * (float) pow(radius,3));
 
 	//unit vector describing normal of surface
 	vec3 n = currentNormal;
