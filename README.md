@@ -1,8 +1,15 @@
-make
-./build/rasterizer
+# COMS30115 Computer Graphics - Rasterizer Coursework
 
-make clipping
-./build/rasterizer_clipping
+For this coursework we had to create a rasterizer in C++ using GLM and SDL.
 
-make texture
-./build/rasterizer_texture
+The rasterizer I made performs clipping and texture mapping.
+
+To compile the program:
+```
+$ make
+```
+
+To run the program:
+```
+$ make run
+```
