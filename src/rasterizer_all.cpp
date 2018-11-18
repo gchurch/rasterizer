@@ -2,7 +2,7 @@
 #include <glm/glm.hpp>
 #include <SDL.h>
 #include "SDLauxiliary.h"
-#include "TestModel.h"
+#include "TestModel_all.h"
 
 using namespace std;
 using glm::vec3;
@@ -18,6 +18,14 @@ const int SCREEN_WIDTH = 500;
 const int SCREEN_HEIGHT = 500;
 SDL_Surface* screen;
 int t;
+
+//Textures
+SDL_Surface* checkered512x512;
+
+enum Texture {None, Checkered};
+
+//Current texture information
+Texture currentTexture = None;
 
 //Camera information
 vec3 cameraPos(0, 0, -3.001);
@@ -44,6 +52,7 @@ float epsilon = 0.00001;
 
 //features
 bool clipping = false;
+bool texture = true;
 
 //Data structure holding information for each pixel
 struct Pixel {
@@ -51,12 +60,14 @@ struct Pixel {
 	int y;
 	float zinv;
 	vec3 pos3d;
+	ivec2 textureCoordinates;
 };
 
 struct Vertex {
 	vec3 o;	//position in original coordinate system
 	vec3 c; //position in current coordinate system
-	float w; 
+	float w;
+	ivec2 textureCoordinates;
 };
 
 vec3 lightPos(0,-0.5, -0.7);
@@ -68,7 +79,7 @@ vec3 currentNormal;
 vec3 currentReflectance;
 /* ----------------------------------------------------------------------------*/
 /* FUNCTIONS                                                                   */
-
+void LoadTextures();
 void Update();
 void Draw();
 void updateRotationMatrix();
@@ -83,6 +94,11 @@ void PixelShader(const Pixel& p);
 
 int main( int argc, char* argv[] )
 {
+	if(texture) {
+	  //Load in the textures
+	  LoadTextures();
+	}
+
 	//Load in the scene
 	LoadTestModel(triangles);
 
@@ -98,6 +114,10 @@ int main( int argc, char* argv[] )
 	SDL_SaveBMP( screen, "screenshot.bmp" );
 
 	return 0;
+}
+
+void LoadTextures() {
+	checkered512x512 = SDL_LoadBMP("bin/images/checkered512x512.bmp");
 }
 
 void Update()
@@ -195,12 +215,28 @@ void Draw()
 		//Create a list of the triangles vertices
 		vector<Vertex> vertices(3);
 		//initalise the vertexes
-		vertices[0].o = triangles[i].v0;
-		vertices[1].o = triangles[i].v1;
-		vertices[2].o = triangles[i].v2;
+		vertices[0].o = triangles[i].v0.pos3d;
+		vertices[1].o = triangles[i].v1.pos3d;
+		vertices[2].o = triangles[i].v2.pos3d;
 		
 		currentNormal = triangles[i].normal;
 		currentReflectance = triangles[i].color;
+
+		if(texture) {
+        	//get the texture coordinates
+			if(triangles[i].texture == 0) {
+			currentTexture = None;
+			}
+			else {
+				vertices[0].textureCoordinates = triangles[i].v0.textureCoordinates;
+				vertices[1].textureCoordinates = triangles[i].v1.textureCoordinates;
+				vertices[2].textureCoordinates = triangles[i].v2.textureCoordinates;
+				if(triangles[i].texture == 1) {
+					currentTexture = Checkered;
+				}
+			}
+		}
+		
 
 		//draw the triangle
 		DrawPolygon(vertices);
@@ -376,6 +412,17 @@ void Interpolate(Pixel a, Pixel b, vector<Pixel>& result) {
 		currentPos3d += stepPos3d;
 	}
 
+	if(texture) {
+		//Interpolate out the texture coordinates
+		if(currentTexture != None) {
+			for(int i = 0; i < N; i++) {
+				float q = (float) i / (float) N;
+				result[i].textureCoordinates.x = ((a.textureCoordinates.x * a.zinv) * (1 - q) + (b.textureCoordinates.x * b.zinv) * q) / result[i].zinv;
+				result[i].textureCoordinates.y = ((a.textureCoordinates.y * a.zinv) * (1 - q) + (b.textureCoordinates.y * b.zinv) * q) / result[i].zinv;			
+			}
+		}
+	}
+
 	if(clipping) {
 		for(unsigned int i = 0; i < result.size(); i++) {
 			switchFromOctantZeroTo(octant, result[i]);
@@ -443,6 +490,9 @@ void ComputePolygonRows(const vector<Pixel>& vertexPixels, vector<Pixel>& leftPi
 				leftPixels[line[k].y - minY].y = line[k].y;
 				leftPixels[line[k].y - minY].zinv = line[k].zinv;
 				leftPixels[line[k].y - minY].pos3d = line[k].pos3d;
+				if(texture) {
+					leftPixels[line[k].y - minY].textureCoordinates = line[k].textureCoordinates;
+				}
 			}
 
 			//if the x value for this y coordinate is greater than the current x value for
@@ -453,6 +503,9 @@ void ComputePolygonRows(const vector<Pixel>& vertexPixels, vector<Pixel>& leftPi
 				rightPixels[line[k].y - minY].y = line[k].y;
 				rightPixels[line[k].y - minY].zinv = line[k].zinv;
 				rightPixels[line[k].y - minY].pos3d = line[k].pos3d;
+				if(texture) {
+					rightPixels[line[k].y - minY].textureCoordinates = line[k].textureCoordinates;
+				}
 			}
 		}
 	}
@@ -510,6 +563,8 @@ void VertexShader(const Vertex& v, Pixel& p) {
 	p.zinv = 1.0f/(float)v.c.z;
 
 	p.pos3d = v.o * p.zinv;
+
+	p.textureCoordinates = v.textureCoordinates;
 }
 
 void PixelShader(const Pixel& p) {
@@ -534,7 +589,23 @@ void PixelShader(const Pixel& p) {
 	//fraction of the power per area depending on surface's angle from light source
 	vec3 D = B * max(dotProduct(r,n),0.0f);
 
-	vec3 illumination = currentReflectance * (D + indirectLightPowerPerArea);
+	vec3 color;
+
+	if(texture) {
+		if(currentTexture == None) {
+			color = currentReflectance;
+		}
+		else {
+			if(currentTexture == Checkered) {
+				color = GetPixelSDL(checkered512x512, p.textureCoordinates.x, p.textureCoordinates.y);
+			}
+		}
+	}
+	else {
+		color = currentReflectance;
+	}
+
+	vec3 illumination = color * (D + indirectLightPowerPerArea);
 
 	//If pixels depth is less than the current pixels depth in the image
 	//then update the image
