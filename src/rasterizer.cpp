@@ -10,8 +10,8 @@ using glm::mat3;
 using glm::ivec2;
 using glm::vec2;
 
-/* ----------------------------------------------------------------------------*/
-/* GLOBAL VARIABLES                                                            */
+//==========================================================================================
+// GLOBAL VARIABLES
 
 //Screen information
 const int SCREEN_WIDTH = 500;
@@ -19,26 +19,22 @@ const int SCREEN_HEIGHT = 500;
 SDL_Surface* screen;
 int t;
 
-//Textures
-SDL_Surface* checkered512x512;
-
-enum Texture {None, Checkered};
-
-//Current texture information
-Texture currentTexture = None;
-
 //Camera information
 vec3 cameraPos(0, 0, -3.001);
 mat3 cameraRot(vec3(1,0,0), vec3(0,1,0), vec3(0,0,1));
 float yaw = 0;
 float pitch = 0;
 float focalLength = 500;
-float posDelta = 0.05;
-float rotDelta = 0.05;
+float posDelta = 0.01;
+float rotDelta = 0.01;
 
-//clipping information
-float clipBoundary = 10;
-float maxDepth = 6.0f;
+//Lighting and colour information
+vec3 lightPos(0,-0.5, -0.7);
+float lightPosStep = 0.1f;
+vec3 lightPower = 14.0f * vec3(1,1,1);
+vec3 indirectLightPowerPerArea = 0.5f * vec3(1,1,1);
+vec3 currentNormal;
+vec3 currentReflectance;
 
 //Scene information
 vector<Triangle> triangles;
@@ -49,10 +45,21 @@ float depthBuffer[SCREEN_HEIGHT][SCREEN_WIDTH];
 //Floating point inaccuracy constant
 float epsilon = 0.00001;
 
+//clipping information
+float clipBoundary = 10;
+float maxDepth = 100;
 
-//features
-bool clipping = false;
-bool texture = true;
+//Texture information
+SDL_Surface* checkered512x512;
+enum Texture {None, Checkered};
+Texture currentTexture = None;
+
+//rasterizer features
+bool clipping = true;
+bool texture = false;
+
+//===============================================================================================
+// DATA STRUCTURES
 
 //Data structure holding information for each pixel
 struct Pixel {
@@ -70,27 +77,19 @@ struct Vertex {
 	ivec2 textureCoordinates;
 };
 
-vec3 lightPos(0,-0.5, -0.7);
-float lightPosStep = 0.1f;
-vec3 lightPower = 14.0f * vec3(1,1,1);
-vec3 indirectLightPowerPerArea = 0.5f * vec3(1,1,1);
-
-vec3 currentNormal;
-vec3 currentReflectance;
-/* ----------------------------------------------------------------------------*/
-/* FUNCTIONS                                                                   */
+//==============================================================================================
+// FUNCTIONS
 void LoadTextures();
 void Update();
 void Draw();
 void updateRotationMatrix();
-
 void Interpolate(Pixel a, Pixel b, vector<Pixel>& result);
 void ComputePolygonRows(const vector<Pixel>& vertexPixels, vector<Pixel>& leftPixels, vector<Pixel>& rightPixels);
 void DrawPolygonRows(const vector<Pixel>& leftPixels, const vector<Pixel>& rightPixels);
 void VertexShader(const Vertex& v, Pixel& p);
 void DrawPolygon(vector<Vertex> vertices);
+void PixelShader(const Pixel p);
 
-void PixelShader(const Pixel& p);
 
 int main( int argc, char* argv[] )
 {
@@ -116,10 +115,12 @@ int main( int argc, char* argv[] )
 	return 0;
 }
 
+//Load the textures to use on surfaces
 void LoadTextures() {
 	checkered512x512 = SDL_LoadBMP("bin/images/checkered512x512.bmp");
 }
 
+//Update the camera and light positions
 void Update()
 {
 	// Compute frame time:
@@ -194,6 +195,7 @@ void Update()
 	}
 }
 
+//Draw the image for this frame
 void Draw()
 {
 	SDL_FillRect(screen, 0, 0);
@@ -259,129 +261,8 @@ void updateRotationMatrix() {
 	cameraRot = yRot * xRot;
 }
 
-int calculateOctant(Pixel a, Pixel b) {
-	int dx = b.x - a.x;
-	int dy = b.y - a.y;
-	float gradient;
-	if(dy == 0) {
-		gradient = 0;
-	}
-	else if(dx == 0) {
-		gradient = 10000;
-	}
-	else {
-		gradient = (float) dy / (float) dx;
-	}
-	/*printf("(%d,%d), (%d,%d)\n", a.x, a.y, b.x, b.y);
-	printf("gradient: %f\n", gradient);*/
-	
-	if(a.y < b.y && gradient > 1 && gradient < numeric_limits<int>::max()) {
-		return 1;
-	}
-	else if(a.x < b.x && gradient >= 0 && gradient <= 1) {
-		return 0;
-	}
-	else if(a.x < b.x && gradient < 0 && gradient >= -1) {
-		return 7;
-	}
-	else if(a.y > b.y && gradient < -1 && gradient > numeric_limits<int>::min()) {
-		return 6;
-	}
-	else if(a.y > b.y && gradient  > 1 && gradient  < numeric_limits<int>::max()) {
-		return 5;
-	}
-	else if(a.x > b.x && gradient > 0 && gradient <= 1) {
-		return 4;
-	}
-	else if(a.x > b.x && gradient <= 0 && gradient >= -1) {
-		return 3;
-	}
-	else if(a.y < b.y && gradient < -1 && gradient > numeric_limits<int>::min()) {
-		return 2;
-	}
-	else {
-		return -1;
-	}
-}
-
-void switchToOctantZeroFrom(int octant, Pixel& p) {
-	int tmp = p.x;
-	switch(octant) {
-		case 0:
-			break; 
-		case 1:
-			p.x = p.y;
-			p.y = tmp;
-			break;
-		case 2:
-			p.x = p.y;
-			p.y = -tmp;
-			break;
-		case 3:
-			p.x = -p.x;
-			break;
-		case 4:
-			p.x = -p.x;
-			p.y = -p.y;
-			break;
-		case 5:
-			p.x = -p.y;
-			p.y = -tmp;
-			break;
-		case 6:
-			p.x = -p.y;
-			p.y = tmp;
-			break;
-		case 7:
-			p.y = -p.y;
-			break;
-	}
-}
-
-void switchFromOctantZeroTo(int octant, Pixel& p) {
-	int tmp = p.x;
-	switch(octant) {
-		case 0:
-			break;
-		case 1:
-			p.x = p.y;
-			p.y = tmp;
-			break;
-		case 2:
-			p.x = -p.y;
-			p.y = tmp;
-			break;
-		case 3:
-			p.x = -p.x;
-			break;
-		case 4:
-			p.x = -p.x;
-			p.y = -p.y;
-			break;
-		case 5:
-			p.x = -p.y;
-			p.y = -tmp;
-			break;
-		case 6:
-			p.x = p.y;
-			p.y = -tmp;
-			break;
-		case 7:
-			p.y = -p.y;
-			break;
-	}
-}
-
-//Interpolate the points on a line between vectors a and b and put the points into result
+//Interpolate the points on a line between vectors a and b and put the points into the result vector
 void Interpolate(Pixel a, Pixel b, vector<Pixel>& result) {
-
-    int octant = calculateOctant(a, b);
-
-	if(clipping) {
-		//printf("octant: %d\n", octant);
-		switchToOctantZeroFrom(octant, a);
-		switchToOctantZeroFrom(octant, b);
-	}
 
 	//Calculate the steps needed in the x and y direction, and also the step needed for the zinv
 	int N = result.size();
@@ -420,12 +301,6 @@ void Interpolate(Pixel a, Pixel b, vector<Pixel>& result) {
 				result[i].textureCoordinates.x = ((a.textureCoordinates.x * a.zinv) * (1 - q) + (b.textureCoordinates.x * b.zinv) * q) / result[i].zinv;
 				result[i].textureCoordinates.y = ((a.textureCoordinates.y * a.zinv) * (1 - q) + (b.textureCoordinates.y * b.zinv) * q) / result[i].zinv;			
 			}
-		}
-	}
-
-	if(clipping) {
-		for(unsigned int i = 0; i < result.size(); i++) {
-			switchFromOctantZeroTo(octant, result[i]);
 		}
 	}
 }
@@ -567,7 +442,8 @@ void VertexShader(const Vertex& v, Pixel& p) {
 	p.textureCoordinates = v.textureCoordinates;
 }
 
-void PixelShader(const Pixel& p) {
+//calculate the colour needed for a pixel, draw it to the buffer and add its depth to the depth buffer
+void PixelShader(const Pixel p) {
 	
 	//Pi constant
 	const float pi = 3.1415926535897;
@@ -617,6 +493,7 @@ void PixelShader(const Pixel& p) {
 	}
 }
 
+//move all vertices into clip space
 void ClipSpace(vector<Vertex>& vertices) {
 	for(unsigned int i = 0; i < vertices.size(); i++) {
 		vertices[i].w = vertices[i].c.z / focalLength;
