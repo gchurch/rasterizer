@@ -465,7 +465,8 @@ void PixelShader(const Pixel p) {
 	//fraction of the power per area depending on surface's angle from light source
 	vec3 D = B * max(dotProduct(r,n),0.0f);
 
-	vec3 color;
+    //the colour that the pixel should be
+	vec3 color = {0,0,0};
 
 	if(texture) {
 		if(currentTexture == None) {
@@ -481,6 +482,7 @@ void PixelShader(const Pixel p) {
 		color = currentReflectance;
 	}
 
+    //change the colour due to light sources
 	vec3 illumination = color * (D + indirectLightPowerPerArea);
 
 	//If pixels depth is less than the current pixels depth in the image
