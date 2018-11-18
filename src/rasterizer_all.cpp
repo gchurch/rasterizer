@@ -19,34 +19,17 @@ const int SCREEN_HEIGHT = 500;
 SDL_Surface* screen;
 int t;
 
-//Textures
-SDL_Surface* checkered512x512;
-SDL_Surface* checkered256x256;
-SDL_Surface* checkered128x128;
-SDL_Surface* checkered64x64;
-SDL_Surface* checkered32x32;
-SDL_Surface* checkered16x16;
-SDL_Surface* checkered8x8;
-SDL_Surface* checkered4x4;
-SDL_Surface* checkered2x2;
-SDL_Surface* checkered1x1;
-
-enum Texture {None, Checkered};
-
-//Current texture information
-Texture currentTexture = None;
-
 //Camera information
 vec3 cameraPos(0, 0, -3.001);
 mat3 cameraRot(vec3(1,0,0), vec3(0,1,0), vec3(0,0,1));
 float yaw = 0;
 float pitch = 0;
 float focalLength = 500;
-float posDelta = 0.1;
+float posDelta = 0.05;
 float rotDelta = 0.05;
 
-//clipping and culling information
-float clipBoundary = 0;
+//clipping information
+float clipBoundary = 10;
 float maxDepth = 6.0f;
 
 //Scene information
@@ -58,20 +41,22 @@ float depthBuffer[SCREEN_HEIGHT][SCREEN_WIDTH];
 //Floating point inaccuracy constant
 float epsilon = 0.00001;
 
+
+//features
+bool clipping = false;
+
 //Data structure holding information for each pixel
 struct Pixel {
 	int x;
 	int y;
 	float zinv;
 	vec3 pos3d;
-	ivec2 textureCoordinates;
 };
 
 struct Vertex {
 	vec3 o;	//position in original coordinate system
 	vec3 c; //position in current coordinate system
-	float w;
-	ivec2 textureCoordinates;
+	float w; 
 };
 
 vec3 lightPos(0,-0.5, -0.7);
@@ -84,10 +69,10 @@ vec3 currentReflectance;
 /* ----------------------------------------------------------------------------*/
 /* FUNCTIONS                                                                   */
 
-void LoadTextures();
 void Update();
 void Draw();
 void updateRotationMatrix();
+
 void Interpolate(Pixel a, Pixel b, vector<Pixel>& result);
 void ComputePolygonRows(const vector<Pixel>& vertexPixels, vector<Pixel>& leftPixels, vector<Pixel>& rightPixels);
 void DrawPolygonRows(const vector<Pixel>& leftPixels, const vector<Pixel>& rightPixels);
@@ -98,9 +83,6 @@ void PixelShader(const Pixel& p);
 
 int main( int argc, char* argv[] )
 {
-	//Load in the textures
-	LoadTextures();
-
 	//Load in the scene
 	LoadTestModel(triangles);
 
@@ -109,26 +91,13 @@ int main( int argc, char* argv[] )
 
 	while( NoQuitMessageSDL() )
 	{
-		Draw();
 		Update();
+		Draw();
 	}
 
 	SDL_SaveBMP( screen, "screenshot.bmp" );
 
 	return 0;
-}
-
-void LoadTextures() {
-	checkered512x512 = SDL_LoadBMP("bin/images/checkered512x512.bmp");
-	checkered256x256 = SDL_LoadBMP("bin/images/checkered256x256.bmp");
-	checkered128x128 = SDL_LoadBMP("bin/images/checkered128x128.bmp");
-	checkered64x64 = SDL_LoadBMP("bin/images/checkered64x64.bmp");
-	checkered32x32 = SDL_LoadBMP("bin/images/checkered32x32.bmp");
-	checkered16x16 = SDL_LoadBMP("bin/images/checkered16x16.bmp");
-	checkered8x8 = SDL_LoadBMP("bin/images/checkered8x8.bmp");
-	checkered4x4 = SDL_LoadBMP("bin/images/checkered4x4.bmp");
-	checkered2x2 = SDL_LoadBMP("bin/images/checkered2x2.bmp");
-	checkered1x1 = SDL_LoadBMP("bin/images/checkered1x1.bmp");
 }
 
 void Update()
@@ -137,7 +106,7 @@ void Update()
 	int t2 = SDL_GetTicks();
 	float dt = float(t2-t);
 	t = t2;
-	printf("Render time: %f ms.\n", dt);
+	cout << "Render time: " << dt << " ms." << endl;
 
 	//get key presses and update camera position
 	Uint8* keystate = SDL_GetKeyState(0);
@@ -166,6 +135,7 @@ void Update()
 		yaw += rotDelta;
 		updateRotationMatrix();
 	}
+
 	if(keystate[SDLK_m])
 	{
 		pitch += rotDelta;
@@ -225,28 +195,16 @@ void Draw()
 		//Create a list of the triangles vertices
 		vector<Vertex> vertices(3);
 		//initalise the vertexes
-		vertices[0].o = triangles[i].v0.pos3d;
-		vertices[1].o = triangles[i].v1.pos3d;
-		vertices[2].o = triangles[i].v2.pos3d;
+		vertices[0].o = triangles[i].v0;
+		vertices[1].o = triangles[i].v1;
+		vertices[2].o = triangles[i].v2;
 		
 		currentNormal = triangles[i].normal;
 		currentReflectance = triangles[i].color;
 
-
-		if(triangles[i].texture == 0) {
-			currentTexture = None;
-		}
-		else {
-			vertices[0].textureCoordinates = triangles[i].v0.textureCoordinates;
-			vertices[1].textureCoordinates = triangles[i].v1.textureCoordinates;
-			vertices[2].textureCoordinates = triangles[i].v2.textureCoordinates;
-			if(triangles[i].texture == 1) {
-				currentTexture = Checkered;
-			}
-		}
-
 		//draw the triangle
 		DrawPolygon(vertices);
+
 	}
 
 
@@ -278,6 +236,8 @@ int calculateOctant(Pixel a, Pixel b) {
 	else {
 		gradient = (float) dy / (float) dx;
 	}
+	/*printf("(%d,%d), (%d,%d)\n", a.x, a.y, b.x, b.y);
+	printf("gradient: %f\n", gradient);*/
 	
 	if(a.y < b.y && gradient > 1 && gradient < numeric_limits<int>::max()) {
 		return 1;
@@ -379,53 +339,47 @@ void switchFromOctantZeroTo(int octant, Pixel& p) {
 //Interpolate the points on a line between vectors a and b and put the points into result
 void Interpolate(Pixel a, Pixel b, vector<Pixel>& result) {
 
-	int octant = calculateOctant(a, b);
-	switchToOctantZeroFrom(octant, a);
-	switchToOctantZeroFrom(octant, b);
+    int octant = calculateOctant(a, b);
 
+	if(clipping) {
+		//printf("octant: %d\n", octant);
+		switchToOctantZeroFrom(octant, a);
+		switchToOctantZeroFrom(octant, b);
+	}
+
+	//Calculate the steps needed in the x and y direction, and also the step needed for the zinv
 	int N = result.size();
-
+	float stepX = (float) (b.x - a.x) / float(max(N-1,1));
+	float stepY = (float) (b.y - a.y) / float(max(N-1,1));
 	float stepZinv = (b.zinv - a.zinv) / float(max(N-1,1));
 	vec3 stepPos3d = (b.pos3d - a.pos3d) / float(max(N-1,1));
-	
+
+	//Set the accumulator values to the same as vector a
+	float currentX = (float) a.x;
+	float currentY = (float) a.y;
 	float currentZinv = (float) a.zinv;
 	vec3 currentPos3d = a.pos3d;
 
-	//Calculate the steps needed in the x and y direction, and also the step needed for the zinv
-	int dx = b.x - a.x;
-	int dy = b.y - a.y;
-	int D = 2 * dy - dx;
-	int y = a.y;
-
-	for(int i = 0; i < N; i++) {
-		int x = i + a.x;
-		result[i].x = x;
-		result[i].y = y;
-		if(D > 0) {
-			y = y + 1;
-			D = D - 2 * dx;
-		}
-		D = D + 2 * dy;
-	}
-
-	for(int i = 0; i < N; i++) {
+	//Calculate each point on the line
+	for(int i = 0; i < N; i++)
+	{
+		//Store the interpolated point in the result list
+		result[i].x = round(currentX);
+		result[i].y = round(currentY);
 		result[i].zinv = currentZinv;
 		result[i].pos3d = currentPos3d;
+
+		//Update the accumulator values
+		currentX += stepX;
+		currentY += stepY;
 		currentZinv += stepZinv;
 		currentPos3d += stepPos3d;
 	}
 
-	//Interpolate out the texture coordinates
-	if(currentTexture != None) {
-		for(int i = 0; i < N; i++) {
-			float q = (float) i / (float) N;
-			result[i].textureCoordinates.x = ((a.textureCoordinates.x * a.zinv) * (1 - q) + (b.textureCoordinates.x * b.zinv) * q) / result[i].zinv;
-			result[i].textureCoordinates.y = ((a.textureCoordinates.y * a.zinv) * (1 - q) + (b.textureCoordinates.y * b.zinv) * q) / result[i].zinv;			
+	if(clipping) {
+		for(unsigned int i = 0; i < result.size(); i++) {
+			switchFromOctantZeroTo(octant, result[i]);
 		}
-	}
-
-	for(unsigned int i = 0; i < result.size(); i++) {
-		switchFromOctantZeroTo(octant, result[i]);
 	}
 }
 
@@ -489,7 +443,6 @@ void ComputePolygonRows(const vector<Pixel>& vertexPixels, vector<Pixel>& leftPi
 				leftPixels[line[k].y - minY].y = line[k].y;
 				leftPixels[line[k].y - minY].zinv = line[k].zinv;
 				leftPixels[line[k].y - minY].pos3d = line[k].pos3d;
-				leftPixels[line[k].y - minY].textureCoordinates = line[k].textureCoordinates;
 			}
 
 			//if the x value for this y coordinate is greater than the current x value for
@@ -500,7 +453,6 @@ void ComputePolygonRows(const vector<Pixel>& vertexPixels, vector<Pixel>& leftPi
 				rightPixels[line[k].y - minY].y = line[k].y;
 				rightPixels[line[k].y - minY].zinv = line[k].zinv;
 				rightPixels[line[k].y - minY].pos3d = line[k].pos3d;
-				rightPixels[line[k].y - minY].textureCoordinates = line[k].textureCoordinates;
 			}
 		}
 	}
@@ -524,16 +476,6 @@ void DrawPolygonRows(const vector<Pixel>& leftPixels, const vector<Pixel>& right
 			//If the pixels zinv value is greater than the corresponding one in the buffer, then draw the pixel
 			PixelShader(line[j]);
 		}
-	}
-}
-
-void DrawLine(Pixel a, Pixel b)
-{
-	int pixels = max(abs(a.x - b.x), abs(a.y - b.y)) + 1;
-	vector<Pixel> line(pixels);
-	Interpolate(a,b,line);
-	for(unsigned int i = 0; i < line.size(); ++i) {
-		PixelShader(line[i]);
 	}
 }
 
@@ -568,11 +510,7 @@ void VertexShader(const Vertex& v, Pixel& p) {
 	p.zinv = 1.0f/(float)v.c.z;
 
 	p.pos3d = v.o * p.zinv;
-
-	p.textureCoordinates = v.textureCoordinates;
 }
-
-bool first;
 
 void PixelShader(const Pixel& p) {
 	
@@ -585,7 +523,7 @@ void PixelShader(const Pixel& p) {
 	float radius = distanceBetweenPoints(pos3d, lightPos);
 
 	//The power per area at this point
-	vec3 B = lightPower / (4 * pi * (float) pow(radius,3));
+	vec3 B = lightPower / ((float) 4.0 * pi * (float) pow(radius,3));
 
 	//unit vector describing normal of surface
 	vec3 n = currentNormal;
@@ -596,40 +534,7 @@ void PixelShader(const Pixel& p) {
 	//fraction of the power per area depending on surface's angle from light source
 	vec3 D = B * max(dotProduct(r,n),0.0f);
 
-
-	vec3 color;
-
-	if(currentTexture == None) {
-		color = currentReflectance;
-	}
-	else {
-		if(currentTexture == Checkered) {
-			if(first == true) {
-				printf("%f\n", p.zinv);
-				first = false;
-			}
-			color = GetPixelSDL(checkered512x512, p.textureCoordinates.x, p.textureCoordinates.y);
-			//printf("(%d,%d)\n", p.textureCoordinates.x, p.textureCoordinates.y);
-			/*if(p.zinv > 0.4f) {
-				color = GetPixelSDL(checkered256x256, p.textureCoordinates.x, p.textureCoordinates.y);
-			}
-			else if(p.zinv > 0.2f) {
-				color = GetPixelSDL(checkered128x128, p.textureCoordinates.x / 2, p.textureCoordinates.y / 2);			
-			}
-			else if(p.zinv > 0.05f) {
-				color = GetPixelSDL(checkered64x64, p.textureCoordinates.x / 4, p.textureCoordinates.y / 4);			
-			}
-			else if(p.zinv > 0.025f) {
-				color = GetPixelSDL(checkered32x32, p.textureCoordinates.x / 8, p.textureCoordinates.y / 8);			
-			}
-			else if(p.zinv > 0.025f) {
-				color = GetPixelSDL(checkered16x16, p.textureCoordinates.x / 16, p.textureCoordinates.y / 16);			
-			}*/
-		}
-	}
-
-	vec3 illumination = color * (D + indirectLightPowerPerArea);
-	//printf("depth: %f\n", p.zinv);
+	vec3 illumination = currentReflectance * (D + indirectLightPowerPerArea);
 
 	//If pixels depth is less than the current pixels depth in the image
 	//then update the image
@@ -638,16 +543,6 @@ void PixelShader(const Pixel& p) {
 			depthBuffer[p.y][p.x] = p.zinv;
 			PutPixelSDL(screen, p.x, p.y, illumination);
 		}
-	}
-}
-
-bool Intersection(const Vertex a, const Vertex b) {
-	float divide = b.c.x - a.c.x;
-	if(divide < epsilon && divide > -epsilon) {
-		return false;
-	}
-	else {
-		return true;
 	}
 }
 
@@ -664,8 +559,6 @@ Vertex ClipRight(Vertex start, Vertex end) {
 	Vertex P;
 	P.c = (1.0f - a) * start.c + a * end.c;
 	P.o = (1.0f - a) * start.o + a * end.o;
-	P.textureCoordinates.x = round((1.0f - a) * (float) start.textureCoordinates.x + a * (float) end.textureCoordinates.x);
-	P.textureCoordinates.y = round((1.0f - a) * (float) start.textureCoordinates.y + a * (float) end.textureCoordinates.y); 
 
 	float w = (1.0f - a) * start.w + a * end.w;
 	float ratio = w / (P.c.z / focalLength);
@@ -706,8 +599,6 @@ Vertex ClipLeft(Vertex start, Vertex end) {
 	Vertex P;
 	P.c = (1.0f - a) * start.c + a * end.c;
 	P.o = (1.0f - a) * start.o + a * end.o;
-	P.textureCoordinates.x = round((1.0f - a) * (float) start.textureCoordinates.x + a * (float) end.textureCoordinates.x);
-	P.textureCoordinates.y = round((1.0f - a) * (float) start.textureCoordinates.y + a * (float) end.textureCoordinates.y); 
 
 	float w = (1.0f - a) * start.w + a * end.w;
 	float ratio = w / (P.c.z / focalLength);
@@ -748,8 +639,6 @@ Vertex ClipTop(Vertex start, Vertex end) {
 	Vertex P;
 	P.c = (1.0f - a) * start.c + a * end.c;
 	P.o = (1.0f - a) * start.o + a * end.o;
-	P.textureCoordinates.x = round((1.0f - a) * (float) start.textureCoordinates.x + a * (float) end.textureCoordinates.x);
-	P.textureCoordinates.y = round((1.0f - a) * (float) start.textureCoordinates.y + a * (float) end.textureCoordinates.y); 
 
 	float w = (1.0f - a) * start.w + a * end.w;
 	float ratio = w / (P.c.z / focalLength);
@@ -790,8 +679,6 @@ Vertex ClipBottom(Vertex start, Vertex end) {
 	Vertex P;
 	P.c = (1.0f - a) * start.c + a * end.c;
 	P.o = (1.0f - a) * start.o + a * end.o;
-	P.textureCoordinates.x = round((1.0f - a) * (float) start.textureCoordinates.x + a * (float) end.textureCoordinates.x);
-	P.textureCoordinates.y = round((1.0f - a) * (float) start.textureCoordinates.y + a * (float) end.textureCoordinates.y); 
 
 	float w = (1.0f - a) * start.w + a * end.w;
 	float ratio = w / (P.c.z / focalLength);
@@ -885,8 +772,6 @@ bool IsPolygonWithinMaxDepth(const vector<Pixel>& vertexPixels) {
 void DrawPolygon(vector<Vertex> vertices)
 {
 
-	first = true;
-
 	//Transform world
 	for(unsigned int i = 0; i < vertices.size(); i++) {
 		TransformVertex(vertices[i]);
@@ -895,24 +780,36 @@ void DrawPolygon(vector<Vertex> vertices)
 	//Backface culling
 	if(IsPolygonInfrontOfCamera(vertices)) {
 
+		bool drawing = true;
+		if(clipping) {
+			if(!Clip(vertices)) {
+				drawing = false;
+			}
+		}
+
 		//Clip polygon - function returns false if new polygon has zero vertices
-		if(Clip(vertices)) {
+		if(drawing) {
 
 			//Calculate the projection of the polygons vertexes
 			vector<Pixel> vertexPixels(vertices.size());
 			for(unsigned int i = 0; i < vertices.size(); i++) {
 				VertexShader(vertices[i], vertexPixels[i]);
 			}
-		
-			//lists to store the left most and right post pixel x values for each y value
-			vector<Pixel> leftPixels;
-			vector<Pixel> rightPixels;
 
-			//Compute the leftPixels and rightPixels lists from the vertexes
-			ComputePolygonRows(vertexPixels, leftPixels, rightPixels);
-			
-			//Draw the polygon
-			DrawPolygonRows(leftPixels, rightPixels);
+			if(IsPolygonWithinMaxDepth(vertexPixels)) {
+		
+				//lists to store the left most and right post pixel x values for each y value
+				vector<Pixel> leftPixels;
+				vector<Pixel> rightPixels;
+
+				//Compute the leftPixels and rightPixels lists from the vertexes
+				ComputePolygonRows(vertexPixels, leftPixels, rightPixels);
+				//printf("compute polygon rows done\n");
+
+				//Draw the polygon
+				DrawPolygonRows(leftPixels, rightPixels);
+				//printf("draw polygon rows done\n");
+			}
 		}
 	}
 }
