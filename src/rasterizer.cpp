@@ -24,30 +24,27 @@ vec3 cameraPos(0, 0, -3.001);
 mat3 cameraRot(vec3(1,0,0), vec3(0,1,0), vec3(0,0,1));
 float yaw = 0;
 float pitch = 0;
-float focalLength = 500;
-float posDelta = 0.01;
-float rotDelta = 0.01;
+const float focalLength = 500;
+const float posDelta = 0.01;
+const float rotDelta = 0.01;
 
 //Lighting and colour information
 vec3 lightPos(0,-0.5, -0.7);
-float lightPosStep = 0.1f;
-vec3 lightPower = 14.0f * vec3(1,1,1);
-vec3 indirectLightPowerPerArea = 0.5f * vec3(1,1,1);
+const float lightPosStep = 0.1f;
+const vec3 lightPower = 14.0f * vec3(1,1,1);
+const vec3 indirectLightPowerPerArea = 0.5f * vec3(1,1,1);
 vec3 currentNormal;
 vec3 currentReflectance;
-
-//Scene information
-vector<Triangle> triangles;
 
 //The depth buffer for the screen
 float depthBuffer[SCREEN_HEIGHT][SCREEN_WIDTH];
 
 //Floating point inaccuracy constant
-float epsilon = 0.00001;
+const float epsilon = 0.00001;
 
 //clipping information
-float clipBoundary = 10;
-float maxDepth = 100;
+const float clipBoundary = 10;
+const float maxDepth = 100;
 
 //Texture information
 SDL_Surface* checkered512x512;
@@ -55,8 +52,8 @@ enum Texture {None, Checkered};
 Texture currentTexture = None;
 
 //rasterizer features
-bool clipping = true;
-bool texture = false;
+const bool clipping = false;
+const bool textures = true;
 
 //===============================================================================================
 // DATA STRUCTURES
@@ -81,9 +78,9 @@ struct Vertex {
 // FUNCTIONS
 void LoadTextures();
 void Update();
-void Draw();
+void Draw(vector<Triangle> triangles);
 void updateRotationMatrix();
-void Interpolate(Pixel a, Pixel b, vector<Pixel>& result);
+void Interpolate(const Pixel a, const Pixel b, vector<Pixel>& result);
 void ComputePolygonRows(const vector<Pixel>& vertexPixels, vector<Pixel>& leftPixels, vector<Pixel>& rightPixels);
 void DrawPolygonRows(const vector<Pixel>& leftPixels, const vector<Pixel>& rightPixels);
 void VertexShader(const Vertex& v, Pixel& p);
@@ -93,11 +90,13 @@ void PixelShader(const Pixel p);
 
 int main( int argc, char* argv[] )
 {
-	if(texture) {
+	if(textures) {
 	  //Load in the textures
 	  LoadTextures();
 	}
 
+	//Scene information
+	vector<Triangle> triangles;
 	//Load in the scene
 	LoadTestModel(triangles);
 
@@ -107,7 +106,7 @@ int main( int argc, char* argv[] )
 	while( NoQuitMessageSDL() )
 	{
 		Update();
-		Draw();
+		Draw(triangles);
 	}
 
 	SDL_SaveBMP( screen, "screenshot.bmp" );
@@ -195,9 +194,10 @@ void Update()
 	}
 }
 
-//Draw the image for this frame
-void Draw()
+//Rendering the screen for the current frame
+void Draw(vector<Triangle> triangles)
 {
+	//clear the screen
 	SDL_FillRect(screen, 0, 0);
 
 	if( SDL_MUSTLOCK(screen) )
@@ -216,55 +216,57 @@ void Draw()
 
 		//Create a list of the triangles vertices
 		vector<Vertex> vertices(3);
-		//initalise the vertexes
+		//set the vertices original positions equal to the triangles vertices positions
 		vertices[0].o = triangles[i].v0.pos3d;
 		vertices[1].o = triangles[i].v1.pos3d;
 		vertices[2].o = triangles[i].v2.pos3d;
 		
+		//set the current normal vector and reflectance colour equal to the triangles normal and colour respectively
 		currentNormal = triangles[i].normal;
 		currentReflectance = triangles[i].color;
 
-		if(texture) {
-        	//get the texture coordinates
+		//If we are using textures then set the current texture and give the vertices their texture coordinates
+		if(textures) {
 			if(triangles[i].texture == 0) {
-			currentTexture = None;
-			}
+				currentTexture = None;
+			} 
 			else {
-				vertices[0].textureCoordinates = triangles[i].v0.textureCoordinates;
-				vertices[1].textureCoordinates = triangles[i].v1.textureCoordinates;
-				vertices[2].textureCoordinates = triangles[i].v2.textureCoordinates;
 				if(triangles[i].texture == 1) {
 					currentTexture = Checkered;
 				}
+				vertices[0].textureCoordinates = triangles[i].v0.textureCoordinates;
+				vertices[1].textureCoordinates = triangles[i].v1.textureCoordinates;
+				vertices[2].textureCoordinates = triangles[i].v2.textureCoordinates;
 			}
 		}
 		
-
 		//draw the triangle
 		DrawPolygon(vertices);
-
 	}
 
 
 	if( SDL_MUSTLOCK(screen) )
 		SDL_UnlockSurface(screen);
 
+    //update the screen
 	SDL_UpdateRect( screen, 0, 0, 0, 0 );
 }
 
 //Update the cameras coordinate system
 void updateRotationMatrix() {
+	//create the rotation matrix for the rotation around the y axis
 	mat3 yRot(vec3(cos(yaw),0,-sin(yaw)), vec3(0,1,0), vec3(sin(yaw),0,cos(yaw)));
+	//create the rotation matrix for the rotation around the x axis
 	mat3 xRot(vec3(1,0,0), vec3(0, cos(pitch), sin(pitch)), vec3(0, -sin(pitch), cos(pitch)));
 
-	//Calcuate new columns for the camera's rotation matrix
+	//Calcuate the new camera rotation matrix
 	cameraRot = yRot * xRot;
 }
 
 //Interpolate the points on a line between vectors a and b and put the points into the result vector
-void Interpolate(Pixel a, Pixel b, vector<Pixel>& result) {
+void Interpolate(const Pixel a, const Pixel b, vector<Pixel>& result) {
 
-	//Calculate the steps needed in the x and y direction, and also the step needed for the zinv
+	//Calculate the steps needed to interpolate between pixels
 	int N = result.size();
 	float stepX = (float) (b.x - a.x) / float(max(N-1,1));
 	float stepY = (float) (b.y - a.y) / float(max(N-1,1));
@@ -293,8 +295,9 @@ void Interpolate(Pixel a, Pixel b, vector<Pixel>& result) {
 		currentPos3d += stepPos3d;
 	}
 
-	if(texture) {
-		//Interpolate out the texture coordinates
+	//if textures are enabled
+	if(textures) {
+		//Interpolate the texture coordinates
 		if(currentTexture != None) {
 			for(int i = 0; i < N; i++) {
 				float q = (float) i / (float) N;
@@ -305,7 +308,7 @@ void Interpolate(Pixel a, Pixel b, vector<Pixel>& result) {
 	}
 }
 
-//Calculate the leftPixels and rightPixels lists from the vertex coordinats of the polygon
+//Calculate the leftPixels and rightPixels lists from the vertex coordinates of the polygon
 void ComputePolygonRows(const vector<Pixel>& vertexPixels, vector<Pixel>& leftPixels, vector<Pixel>& rightPixels) {
 		
 	//The maximum and minimum integer values
@@ -365,7 +368,7 @@ void ComputePolygonRows(const vector<Pixel>& vertexPixels, vector<Pixel>& leftPi
 				leftPixels[line[k].y - minY].y = line[k].y;
 				leftPixels[line[k].y - minY].zinv = line[k].zinv;
 				leftPixels[line[k].y - minY].pos3d = line[k].pos3d;
-				if(texture) {
+				if(textures) {
 					leftPixels[line[k].y - minY].textureCoordinates = line[k].textureCoordinates;
 				}
 			}
@@ -378,7 +381,7 @@ void ComputePolygonRows(const vector<Pixel>& vertexPixels, vector<Pixel>& leftPi
 				rightPixels[line[k].y - minY].y = line[k].y;
 				rightPixels[line[k].y - minY].zinv = line[k].zinv;
 				rightPixels[line[k].y - minY].pos3d = line[k].pos3d;
-				if(texture) {
+				if(textures) {
 					rightPixels[line[k].y - minY].textureCoordinates = line[k].textureCoordinates;
 				}
 			}
@@ -468,7 +471,7 @@ void PixelShader(const Pixel p) {
     //the colour that the pixel should be
 	vec3 color = {0,0,0};
 
-	if(texture) {
+	if(textures) {
 		if(currentTexture == None) {
 			color = currentReflectance;
 		}
