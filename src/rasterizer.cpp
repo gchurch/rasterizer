@@ -52,8 +52,8 @@ enum Texture {None, Checkered};
 Texture currentTexture = None;
 
 //rasterizer features
-const bool clipping = false;
-const bool textures = true;
+const bool clipping = true;
+const bool textures = false;
 
 //===============================================================================================
 // DATA STRUCTURES
@@ -78,13 +78,13 @@ struct Vertex {
 // FUNCTIONS
 void LoadTextures();
 void Update();
-void Draw(vector<Triangle> triangles);
+void Draw(const vector<Triangle> triangles);
 void updateRotationMatrix();
 void Interpolate(const Pixel a, const Pixel b, vector<Pixel>& result);
 void ComputePolygonRows(const vector<Pixel>& vertexPixels, vector<Pixel>& leftPixels, vector<Pixel>& rightPixels);
 void DrawPolygonRows(const vector<Pixel>& leftPixels, const vector<Pixel>& rightPixels);
 void VertexShader(const Vertex& v, Pixel& p);
-void DrawPolygon(vector<Vertex> vertices);
+void DrawPolygon(const vector<Vertex> vertices);
 void PixelShader(const Pixel p);
 
 
@@ -195,7 +195,7 @@ void Update()
 }
 
 //Rendering the screen for the current frame
-void Draw(vector<Triangle> triangles)
+void Draw(const vector<Triangle> triangles)
 {
 	//clear the screen
 	SDL_FillRect(screen, 0, 0);
@@ -499,10 +499,12 @@ void PixelShader(const Pixel p) {
 }
 
 //move all vertices into clip space
-void ClipSpace(vector<Vertex>& vertices) {
-	for(unsigned int i = 0; i < vertices.size(); i++) {
-		vertices[i].w = vertices[i].c.z / focalLength;
+vector<Vertex> ClipSpace(const vector<Vertex> vertices) {
+	vector<Vertex> newVertices = vertices;
+	for(unsigned int i = 0; i < newVertices.size(); i++) {
+		newVertices[i].w = newVertices[i].c.z / focalLength;
 	}
+	return newVertices;
 }
 
 Vertex ClipRight(Vertex start, Vertex end) {
@@ -662,16 +664,15 @@ void ClipBottomEdge(vector<Vertex>& inputList, vector<Vertex>& outputList) {
 			Vertex P = ClipBottom(start, end);
 			outputList.push_back(P);
 		}
-		//start = end;
 	}
 }
 
 
-bool Clip(vector<Vertex>& vertices) {
+vector<Vertex> Clip(const vector<Vertex> vertices) {
 
-	ClipSpace(vertices);
+	vector<Vertex> clipSpaceVertices = ClipSpace(vertices);
 
-	vector<Vertex> outputList = vertices;
+	vector<Vertex> outputList = clipSpaceVertices;
 	vector<Vertex> inputList;
 
 	inputList = outputList;
@@ -694,9 +695,7 @@ bool Clip(vector<Vertex>& vertices) {
 
 	ClipLeftEdge(inputList, outputList);
 
-	vertices = outputList;
-
-	return (vertices.size() > 0);
+	return outputList;
 }
 
 bool IsPolygonInfrontOfCamera(const vector<Vertex>& vertices) {
@@ -722,47 +721,41 @@ bool IsPolygonWithinMaxDepth(const vector<Pixel>& vertexPixels) {
 }
 
 //Draw a polygon given its vertices, taking into account depth
-void DrawPolygon(vector<Vertex> vertices)
+void DrawPolygon(const vector<Vertex> vertices)
 {
+
+	vector<Vertex> verticesCopy = vertices;
 
 	//Transform world
 	for(unsigned int i = 0; i < vertices.size(); i++) {
-		TransformVertex(vertices[i]);
+		TransformVertex(verticesCopy[i]);
 	}
 
 	//Backface culling
-	if(IsPolygonInfrontOfCamera(vertices)) {
+	if(IsPolygonInfrontOfCamera(verticesCopy)) {
 
-		bool drawing = true;
+		//If clipping is enabled then clip the polygon
 		if(clipping) {
-			if(!Clip(vertices)) {
-				drawing = false;
-			}
+			verticesCopy = Clip(verticesCopy);
 		}
 
-		//Clip polygon - function returns false if new polygon has zero vertices
-		if(drawing) {
+		//Calculate the projection of the polygons vertexes
+		vector<Pixel> vertexPixels(verticesCopy.size());
+		for(unsigned int i = 0; i < verticesCopy.size(); i++) {
+			VertexShader(verticesCopy[i], vertexPixels[i]);
+		}
 
-			//Calculate the projection of the polygons vertexes
-			vector<Pixel> vertexPixels(vertices.size());
-			for(unsigned int i = 0; i < vertices.size(); i++) {
-				VertexShader(vertices[i], vertexPixels[i]);
-			}
-
-			if(IsPolygonWithinMaxDepth(vertexPixels)) {
+		if(IsPolygonWithinMaxDepth(vertexPixels)) {
 		
-				//lists to store the left most and right post pixel x values for each y value
-				vector<Pixel> leftPixels;
-				vector<Pixel> rightPixels;
+			//lists to store the left most and right post pixel x values for each y value
+			vector<Pixel> leftPixels;
+			vector<Pixel> rightPixels;
 
-				//Compute the leftPixels and rightPixels lists from the vertexes
-				ComputePolygonRows(vertexPixels, leftPixels, rightPixels);
-				//printf("compute polygon rows done\n");
+			//Compute the leftPixels and rightPixels lists from the vertexes
+			ComputePolygonRows(vertexPixels, leftPixels, rightPixels);
 
-				//Draw the polygon
-				DrawPolygonRows(leftPixels, rightPixels);
-				//printf("draw polygon rows done\n");
-			}
+			//Draw the polygon
+			DrawPolygonRows(leftPixels, rightPixels);
 		}
 	}
 }
