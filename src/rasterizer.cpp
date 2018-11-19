@@ -20,7 +20,7 @@ SDL_Surface* screen;
 int t;
 
 //Camera information
-vec3 cameraPos(0, 0, -3.001);
+vec3 cameraPos(0, 0, -5.001);
 mat3 cameraRot(vec3(1,0,0), vec3(0,1,0), vec3(0,0,1));
 float yaw = 0;
 float pitch = 0;
@@ -53,7 +53,7 @@ Texture currentTexture = None;
 
 //rasterizer features
 const bool clipping = true;
-const bool textures = false;
+const bool textures = true;
 
 //===============================================================================================
 // DATA STRUCTURES
@@ -468,21 +468,16 @@ void PixelShader(const Pixel p) {
 	//fraction of the power per area depending on surface's angle from light source
 	vec3 D = B * max(dotProduct(r,n),0.0f);
 
-    //the colour that the pixel should be
-	vec3 color = {0,0,0};
+    //set the colour to the colour of current triangle
+	vec3 color = currentReflectance;
 
+    //if textures are enabled then set the colour equal to the colour at the texture coordinate
 	if(textures) {
-		if(currentTexture == None) {
-			color = currentReflectance;
-		}
-		else {
-			if(currentTexture == Checkered) {
+		if(currentTexture == Checkered) {
+			if(p.textureCoordinates.x >= 0 && p.textureCoordinates.x <= 511 && p.textureCoordinates.y >= 0 && p.textureCoordinates.y <= 511) {
 				color = GetPixelSDL(checkered512x512, p.textureCoordinates.x, p.textureCoordinates.y);
 			}
 		}
-	}
-	else {
-		color = currentReflectance;
 	}
 
     //change the colour due to light sources
