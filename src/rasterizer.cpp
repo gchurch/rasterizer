@@ -43,7 +43,7 @@ float depthBuffer[SCREEN_HEIGHT][SCREEN_WIDTH];
 const float epsilon = 0.00001;
 
 //clipping information
-const float clipBoundary = 10;
+const float clipBoundary = 20;
 const float maxDepth = 100;
 
 //Texture information
@@ -301,8 +301,8 @@ void Interpolate(const Pixel a, const Pixel b, vector<Pixel>& result) {
 		if(currentTexture != None) {
 			for(int i = 0; i < N; i++) {
 				float q = (float) i / (float) N;
-				result[i].textureCoordinates.x = ((a.textureCoordinates.x * a.zinv) * (1 - q) + (b.textureCoordinates.x * b.zinv) * q) / result[i].zinv;
-				result[i].textureCoordinates.y = ((a.textureCoordinates.y * a.zinv) * (1 - q) + (b.textureCoordinates.y * b.zinv) * q) / result[i].zinv;			
+				result[i].textureCoordinates.x = round( ( ( (float) a.textureCoordinates.x * a.zinv ) * (1 - q) + ( (float) b.textureCoordinates.x * b.zinv ) * q ) / result[i].zinv );
+				result[i].textureCoordinates.y = round( ( ( (float) a.textureCoordinates.y * a.zinv ) * (1 - q) + ( (float) b.textureCoordinates.y * b.zinv ) * q ) / result[i].zinv );			
 			}
 		}
 	}
@@ -509,6 +509,10 @@ Vertex ClipRight(Vertex start, Vertex end) {
 	Vertex P;
 	P.c = (1.0f - a) * start.c + a * end.c;
 	P.o = (1.0f - a) * start.o + a * end.o;
+	if(textures) {
+		P.textureCoordinates.x = (1.0f - a) * start.textureCoordinates.x + a * end.textureCoordinates.x;
+		P.textureCoordinates.y = (1.0f - a) * start.textureCoordinates.y + a * end.textureCoordinates.y;
+	}
 
 	float w = (1.0f - a) * start.w + a * end.w;
 	float ratio = w / (P.c.z / focalLength);
@@ -549,6 +553,10 @@ Vertex ClipLeft(Vertex start, Vertex end) {
 	Vertex P;
 	P.c = (1.0f - a) * start.c + a * end.c;
 	P.o = (1.0f - a) * start.o + a * end.o;
+	if(textures) {
+		P.textureCoordinates.x = (1.0f - a) * start.textureCoordinates.x + a * end.textureCoordinates.x;
+		P.textureCoordinates.y = (1.0f - a) * start.textureCoordinates.y + a * end.textureCoordinates.y;
+	}
 
 	float w = (1.0f - a) * start.w + a * end.w;
 	float ratio = w / (P.c.z / focalLength);
@@ -589,6 +597,10 @@ Vertex ClipTop(Vertex start, Vertex end) {
 	Vertex P;
 	P.c = (1.0f - a) * start.c + a * end.c;
 	P.o = (1.0f - a) * start.o + a * end.o;
+	if(textures) {
+		P.textureCoordinates.x = (1.0f - a) * start.textureCoordinates.x + a * end.textureCoordinates.x;
+		P.textureCoordinates.y = (1.0f - a) * start.textureCoordinates.y + a * end.textureCoordinates.y;
+	}
 
 	float w = (1.0f - a) * start.w + a * end.w;
 	float ratio = w / (P.c.z / focalLength);
@@ -629,6 +641,10 @@ Vertex ClipBottom(Vertex start, Vertex end) {
 	Vertex P;
 	P.c = (1.0f - a) * start.c + a * end.c;
 	P.o = (1.0f - a) * start.o + a * end.o;
+	if(textures) {
+		P.textureCoordinates.x = (1.0f - a) * start.textureCoordinates.x + a * end.textureCoordinates.x;
+		P.textureCoordinates.y = (1.0f - a) * start.textureCoordinates.y + a * end.textureCoordinates.y;
+	}
 
 	float w = (1.0f - a) * start.w + a * end.w;
 	float ratio = w / (P.c.z / focalLength);
