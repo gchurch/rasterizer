@@ -33,8 +33,6 @@ vec3 lightPos(0,-0.5, -0.7);
 const float lightPosStep = 0.1f;
 const vec3 lightPower = 14.0f * vec3(1,1,1);
 const vec3 indirectLightPowerPerArea = 0.5f * vec3(1,1,1);
-vec3 currentNormal;
-vec3 currentReflectance;
 
 //The depth buffer for the screen
 float depthBuffer[SCREEN_HEIGHT][SCREEN_WIDTH];
@@ -52,8 +50,8 @@ enum Texture {None, Checkered};
 Texture currentTexture = None;
 
 //rasterizer features
-const bool clipping = false;
-const bool textures = true;
+const bool clipping = true;
+const bool textures = false;
 
 //===============================================================================================
 // DATA STRUCTURES
@@ -82,10 +80,10 @@ void Draw(vector<Triangle> triangles);
 void updateRotationMatrix();
 void Interpolate(const Pixel a, const Pixel b, vector<Pixel>& result);
 void ComputePolygonRows(const vector<Pixel>& vertexPixels, vector<Pixel>& leftPixels, vector<Pixel>& rightPixels);
-void DrawPolygonRows(const vector<Pixel>& leftPixels, const vector<Pixel>& rightPixels);
+void DrawPolygonRows(const vector<Pixel>& leftPixels, const vector<Pixel>& rightPixels, vec3 colour, vec3 normal);
 void VertexShader(const Vertex& v, Pixel& p);
-void DrawPolygon(vector<Vertex> vertices);
-void PixelShader(const Pixel p);
+void DrawPolygon(vector<Vertex> vertices, vec3 colour, vec3 normal);
+void PixelShader(const Pixel p, vec3 colour, vec3 normal);
 
 
 int main( int argc, char* argv[] )
@@ -126,7 +124,7 @@ void Update()
 	int t2 = SDL_GetTicks();
 	float dt = float(t2-t);
 	t = t2;
-	cout << "Render time: " << dt << " ms." << endl;
+	printf("Render time: %.0f ms.\n", dt);
 
 	//get key presses and update camera position
 	Uint8* keystate = SDL_GetKeyState(0);
@@ -222,8 +220,8 @@ void Draw(vector<Triangle> triangles)
 		vertices[2].o = triangles[i].v2.pos3d;
 		
 		//set the current normal vector and reflectance colour equal to the triangles normal and colour respectively
-		currentNormal = triangles[i].normal;
-		currentReflectance = triangles[i].color;
+		vec3 normal = triangles[i].normal;
+		vec3 colour = triangles[i].color;
 
 		//If we are using textures then set the current texture and give the vertices their texture coordinates
 		if(textures) {
@@ -241,7 +239,7 @@ void Draw(vector<Triangle> triangles)
 		}
 		
 		//draw the triangle
-		DrawPolygon(vertices);
+		DrawPolygon(vertices, colour, normal);
 	}
 
 
@@ -389,8 +387,8 @@ void ComputePolygonRows(const vector<Pixel>& vertexPixels, vector<Pixel>& leftPi
 	}
 }
 
-//Draw the polygon given the leftmost and rightmost pixel positions for each y value
-void DrawPolygonRows(const vector<Pixel>& leftPixels, const vector<Pixel>& rightPixels) {
+//Draw the pixels of a polygon given the leftmost and rightmost x values for each y value
+void DrawPolygonRows(const vector<Pixel>& leftPixels, const vector<Pixel>& rightPixels, vec3 colour, vec3 normal) {
 	//Iterate through all the leftPixels and rightPixel elements
 	unsigned int V = leftPixels.size();
 	for(unsigned int i = 0; i < V; i++) {
@@ -405,7 +403,7 @@ void DrawPolygonRows(const vector<Pixel>& leftPixels, const vector<Pixel>& right
 		//Iterate over all the interpolated pixels
 		for(int j = 0; j < pixels; j++) {
 			//If the pixels zinv value is greater than the corresponding one in the buffer, then draw the pixel
-			PixelShader(line[j]);
+			PixelShader(line[j], colour, normal);
 		}
 	}
 }
@@ -430,7 +428,7 @@ void TransformVertex(Vertex& v) {
 	v.c = (v.o - cameraPos) * cameraRot;
 }
 
-//Project the 3d point v to 2D
+//Project the 3D vertex v to a 2D pixel p
 void VertexShader(const Vertex& v, Pixel& p) {
 
 	//project the x and y values
@@ -446,7 +444,7 @@ void VertexShader(const Vertex& v, Pixel& p) {
 }
 
 //calculate the colour needed for a pixel, draw it to the buffer and add its depth to the depth buffer
-void PixelShader(const Pixel p) {
+void PixelShader(const Pixel p, vec3 colour, vec3 normal) {
 	
 	//Pi constant
 	const float pi = 3.1415926535897;
@@ -460,7 +458,7 @@ void PixelShader(const Pixel p) {
 	vec3 B = lightPower / ((float) 4.0 * pi * (float) pow(radius,3));
 
 	//unit vector describing normal of surface
-	vec3 n = currentNormal;
+	vec3 n = normal;
 
 	//unit vector describing direction from surface point to light source
 	vec3 r = unitVectorToLightSource(pos3d);
@@ -468,25 +466,16 @@ void PixelShader(const Pixel p) {
 	//fraction of the power per area depending on surface's angle from light source
 	vec3 D = B * max(dotProduct(r,n),0.0f);
 
-    //the colour that the pixel should be
-	vec3 color = {0,0,0};
-
 	if(textures) {
-		if(currentTexture == None) {
-			color = currentReflectance;
-		}
-		else {
+		if(currentTexture != None) {
 			if(currentTexture == Checkered) {
-				color = GetPixelSDL(checkered512x512, p.textureCoordinates.x, p.textureCoordinates.y);
+				colour = GetPixelSDL(checkered512x512, p.textureCoordinates.x, p.textureCoordinates.y);
 			}
 		}
 	}
-	else {
-		color = currentReflectance;
-	}
 
     //change the colour due to light sources
-	vec3 illumination = color * (D + indirectLightPowerPerArea);
+	vec3 illumination = colour * (D + indirectLightPowerPerArea);
 
 	//If pixels depth is less than the current pixels depth in the image
 	//then update the image
@@ -722,7 +711,7 @@ bool IsPolygonWithinMaxDepth(const vector<Pixel>& vertexPixels) {
 }
 
 //Draw a polygon given its vertices, taking into account depth
-void DrawPolygon(vector<Vertex> vertices)
+void DrawPolygon(vector<Vertex> vertices, vec3 colour, vec3 normal)
 {
 
 	//Transform world
@@ -760,7 +749,7 @@ void DrawPolygon(vector<Vertex> vertices)
 				//printf("compute polygon rows done\n");
 
 				//Draw the polygon
-				DrawPolygonRows(leftPixels, rightPixels);
+				DrawPolygonRows(leftPixels, rightPixels, colour, normal);
 				//printf("draw polygon rows done\n");
 			}
 		}
