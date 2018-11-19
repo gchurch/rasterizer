@@ -532,7 +532,7 @@ void ClipRightEdge(vector<Vertex>& inputList, vector<Vertex>& outputList) {
 		float startxmax = start.w * ((float) SCREEN_WIDTH / 2.0f - clipBoundary);
 		float endxmax = end.w * ((float) SCREEN_WIDTH / 2.0f - clipBoundary);
 
-		if(end.c.x < endxmax) {
+		if(end.c.x < endxmax + epsilon) {
 			if(start.c.x > startxmax) {
 				Vertex P = ClipRight(start, end);
 				outputList.push_back(P);
@@ -572,7 +572,7 @@ void ClipLeftEdge(vector<Vertex>& inputList, vector<Vertex>& outputList) {
 		float startxmin = -start.w * ((float) SCREEN_WIDTH / 2.0f - clipBoundary);
 		float endxmin = -end.w * ((float) SCREEN_WIDTH / 2.0f - clipBoundary);
 
-		if(end.c.x > endxmin) {
+		if(end.c.x > endxmin - epsilon) {
 			if(start.c.x < startxmin) {
 				Vertex P = ClipLeft(start, end);
 				outputList.push_back(P);
@@ -612,7 +612,7 @@ void ClipTopEdge(vector<Vertex>& inputList, vector<Vertex>& outputList) {
 		float startymin = -start.w * ((float) SCREEN_HEIGHT / 2.0f - clipBoundary);
 		float endymin = -end.w * ((float) SCREEN_HEIGHT / 2.0f - clipBoundary);
 
-		if(end.c.y > endymin) {
+		if(end.c.y > endymin - epsilon) {
 			if(start.c.y < startymin) {
 				Vertex P = ClipTop(start, end);
 				outputList.push_back(P);
@@ -653,7 +653,7 @@ void ClipBottomEdge(vector<Vertex>& inputList, vector<Vertex>& outputList) {
 		float startymax = start.w * ((float) SCREEN_HEIGHT / 2.0f - clipBoundary);
 		float endymax = end.w * ((float) SCREEN_HEIGHT / 2.0f - clipBoundary);
 
-		if(end.c.y < endymax) {
+		if(end.c.y < endymax + epsilon) {
 			if(start.c.y > startymax) {
 				Vertex P = ClipBottom(start, end);
 				outputList.push_back(P);
