@@ -13,3 +13,7 @@ To run the program:
 ```
 $ make run
 ```
+
+## Screenshot
+
+![Screenshot](./screenshot_example.bmp "screenshot")
