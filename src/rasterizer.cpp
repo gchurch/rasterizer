@@ -20,13 +20,13 @@ SDL_Surface* screen;
 int t;
 
 //Camera information
-vec3 cameraPos(0, 0, -5.001);
+vec3 cameraPos(0, 0, -3.001);
 mat3 cameraRot(vec3(1,0,0), vec3(0,1,0), vec3(0,0,1));
 float yaw = 0;
 float pitch = 0;
 const float focalLength = 500;
-const float posDelta = 0.01;
-const float rotDelta = 0.01;
+const float posDelta = 0.02;
+const float rotDelta = 0.02;
 
 //Lighting and colour information
 vec3 lightPos(0,-0.5, -0.7);
@@ -505,8 +505,10 @@ vector<Vertex> ClipSpace(const vector<Vertex> vertices) {
 Vertex ClipRight(Vertex start, Vertex end) {
 	float factor = (((float) SCREEN_WIDTH) / 2.0f) - clipBoundary;
 
+    //The percentage of how far from start to end the intersection ocurrs
 	float a = (start.c.x - start.w * factor) / (-start.w * factor + end.w * factor + start.c.x - end.c.x);
 	Vertex P;
+	//The coordinates are a combination of the start and end coordinates
 	P.c = (1.0f - a) * start.c + a * end.c;
 	P.o = (1.0f - a) * start.o + a * end.o;
 	if(textures) {
@@ -532,13 +534,13 @@ void ClipRightEdge(vector<Vertex>& inputList, vector<Vertex>& outputList) {
 		float endxmax = end.w * ((float) SCREEN_WIDTH / 2.0f - clipBoundary);
 
 		if(end.c.x < endxmax + epsilon) {
-			if(start.c.x > startxmax) {
+			if(start.c.x > startxmax - epsilon) {
 				Vertex P = ClipRight(start, end);
 				outputList.push_back(P);
 			}
 			outputList.push_back(end);
 		}
-		else if(start.c.x < startxmax) {
+		else if(start.c.x < startxmax + epsilon) {
 			Vertex P = ClipRight(start, end);
 			outputList.push_back(P);
 		}
@@ -576,13 +578,13 @@ void ClipLeftEdge(vector<Vertex>& inputList, vector<Vertex>& outputList) {
 		float endxmin = -end.w * ((float) SCREEN_WIDTH / 2.0f - clipBoundary);
 
 		if(end.c.x > endxmin - epsilon) {
-			if(start.c.x < startxmin) {
+			if(start.c.x < startxmin + epsilon) {
 				Vertex P = ClipLeft(start, end);
 				outputList.push_back(P);
 			}
 			outputList.push_back(end);
 		}
-		else if(start.c.x > startxmin) {
+		else if(start.c.x > startxmin - epsilon) {
 			Vertex P = ClipLeft(start, end);
 			outputList.push_back(P);
 		}
@@ -620,13 +622,13 @@ void ClipTopEdge(vector<Vertex>& inputList, vector<Vertex>& outputList) {
 		float endymin = -end.w * ((float) SCREEN_HEIGHT / 2.0f - clipBoundary);
 
 		if(end.c.y > endymin - epsilon) {
-			if(start.c.y < startymin) {
+			if(start.c.y < startymin + epsilon) {
 				Vertex P = ClipTop(start, end);
 				outputList.push_back(P);
 			}
 			outputList.push_back(end);
 		}
-		else if(start.c.y > startymin) {
+		else if(start.c.y > startymin - epsilon) {
 			Vertex P = ClipTop(start, end);
 			outputList.push_back(P);
 		}
@@ -665,13 +667,13 @@ void ClipBottomEdge(vector<Vertex>& inputList, vector<Vertex>& outputList) {
 		float endymax = end.w * ((float) SCREEN_HEIGHT / 2.0f - clipBoundary);
 
 		if(end.c.y < endymax + epsilon) {
-			if(start.c.y > startymax) {
+			if(start.c.y > startymax - epsilon) {
 				Vertex P = ClipBottom(start, end);
 				outputList.push_back(P);
 			}
 			outputList.push_back(end);
 		}
-		else if(start.c.y < startymax) {
+		else if(start.c.y < startymax + epsilon) {
 			Vertex P = ClipBottom(start, end);
 			outputList.push_back(P);
 		}
