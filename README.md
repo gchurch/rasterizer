@@ -6,7 +6,7 @@ The rasterizer that I created performs clipping and texture mapping.
 
 ## Screenshot
 
-![Screenshot](./screenshot_example.bmp "screenshot")
+![demo](./demo.gif "demo")
 
 ## Setup
 
