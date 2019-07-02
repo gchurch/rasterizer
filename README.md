@@ -4,7 +4,7 @@ For this coursework we had to create a rasterizer in C++ using GLM and SDL.
 
 The rasterizer that I created performs clipping and texture mapping.
 
-## Screenshot
+## Demo
 
 ![demo](./demo.gif "demo")
 
