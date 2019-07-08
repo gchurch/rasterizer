@@ -6,7 +6,7 @@ The rasterizer that I created performs clipping and texture mapping.
 
 ## Demo
 
-![demo](./demo.gif "demo")
+![demo](./rasterizer.gif "demo")
 
 ## Setup
 
