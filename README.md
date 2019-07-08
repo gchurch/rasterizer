@@ -2,18 +2,43 @@
 
 For this coursework we had to create a rasterizer in C++ using GLM and SDL.
 
-The rasterizer I made performs clipping and texture mapping.
+The rasterizer that I created performs clipping and texture mapping.
 
-To compile the program:
+## Demo
+
+![demo](./demo.gif "demo")
+
+## Setup
+
+
+Install SDL with the command:
+
+```
+sudo apt-get install libsdl1.2-dev
+```
+
+Clone the repository with the command:
+
+```
+$ git clone --recurse-submodules https://github.com/gchurch/rasterizer
+````
+
+## Compilation
+
+To compile the code, enter the command:
+
 ```
 $ make
 ```
+## Execution
 
-To run the program:
+To execute the raytracer, enter the command:
+
 ```
 $ make run
 ```
+## Controls
 
-## Screenshot
+You can move the camera's view by using the up, down, left, right, m and n keys
 
-![Screenshot](./screenshot_example.bmp "screenshot")
+You can also move the light source's position by using the w, s, a and d keys
