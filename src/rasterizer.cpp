@@ -43,7 +43,7 @@ float depthBuffer[SCREEN_HEIGHT][SCREEN_WIDTH];
 const float epsilon = 0.00001;
 
 //clipping information
-const float clipBoundary = 20;
+const float clipBoundary = 5;
 const float maxDepth = 100;
 
 //Texture information
